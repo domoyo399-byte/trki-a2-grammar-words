@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2</title>
+<title>小许 A2 学习系统 v2.1</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -48,6 +48,12 @@ h1{margin:0;font-size:24px}.sub{font-size:13px;color:var(--muted);margin-top:4px
 .mode-switch{display:flex;gap:4px;background:#f2f4f8;padding:4px;border-radius:11px;width:max-content}
 .mode-btn{border:0;background:transparent;border-radius:8px;padding:8px 14px;color:var(--muted)}
 .mode-btn.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.session-box{margin-top:12px;padding:11px 12px;background:#f7f8fb;border:1px solid var(--line);border-radius:12px}
+.session-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.session-label{font-size:13px;color:var(--muted);margin-right:2px}
+.session-choice{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 11px}
+.session-choice.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.session-hint{margin-top:7px;font-size:12px;color:var(--muted);line-height:1.5}
 .test-box{max-width:720px;margin:0 auto;padding:8px 0}
 .question{font-size:23px;font-weight:720;line-height:1.45;margin:12px 0 16px}
 .answer-input{width:100%;border:1px solid #cbd3df;border-radius:10px;padding:12px 13px}
@@ -132,6 +138,16 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
     </div>
 
     <div id="studyMode">
+      <div class="session-box">
+        <div class="session-row">
+          <span class="session-label">本轮学习新词：</span>
+          <button class="session-choice active" data-study-size="10" onclick="setStudySize(10)">10 个</button>
+          <button class="session-choice" data-study-size="20" onclick="setStudySize(20)">20 个</button>
+          <button class="session-choice" data-study-size="30" onclick="setStudySize(30)">30 个</button>
+          <button class="btn soft" onclick="startStudyRound()">开始 / 重新抽取本轮</button>
+        </div>
+        <div class="session-hint" id="studySessionHint">默认每轮 10 个尚未首次学习的新词。</div>
+      </div>
       <div class="word-card">
         <div>
           <div class="counter" id="studyCounter">0 / 0</div>
@@ -156,6 +172,15 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
     </div>
 
     <div id="testMode" class="hidden">
+      <div class="session-box">
+        <div class="session-row">
+          <span class="session-label">今天测试的新词：</span>
+          <button class="session-choice active" data-test-size="10" onclick="setTestSize(10)">10 个</button>
+          <button class="session-choice" data-test-size="20" onclick="setTestSize(20)">20 个</button>
+          <button class="session-choice" data-test-size="30" onclick="setTestSize(30)">30 个</button>
+        </div>
+        <div class="session-hint" id="testSessionHint">只有完成首次学习的词才会进入新词测试；旧词到期复习不受这个数量限制。</div>
+      </div>
       <div class="test-box">
         <div class="small" id="testType"></div>
         <div class="question" id="testQuestion">点击“开始测试”</div>
@@ -276,6 +301,7 @@ const ERROR_INTERVALS=[24*60*60e3,3*864e5,7*864e5,14*864e5,30*864e5];
 let content=loadContent();
 let progress=loadProgress();
 let studyIndex=0, studyList=[], studyFlipped=false;
+let studyBatchSize=10, testNewWordLimit=10, studyRoundIds=[];
 let testQueue=[], currentTest=null;
 let errorQueue=[], currentError=null;
 
@@ -295,7 +321,8 @@ function loadContent(){
 }
 function defaultDim(){return{stage:0,nextReview:null,correct:0,wrong:0,streak:0,recent:[]}}
 function ensureVocabProgress(id){
- if(!progress.vocab[id])progress.vocab[id]={learned:false,learnedAt:null,needsReconfirm:false,dims:{recognition:defaultDim(),active:defaultDim(),government:defaultDim(),sense:defaultDim()}};
+ if(!progress.vocab[id])progress.vocab[id]={learned:false,learnedAt:null,learnedDay:null,needsReconfirm:false,dims:{recognition:defaultDim(),active:defaultDim(),government:defaultDim(),sense:defaultDim()}};
+if(!("learnedDay" in progress.vocab[id]))progress.vocab[id].learnedDay=progress.vocab[id].learnedAt?localDayKey(progress.vocab[id].learnedAt):null;
  return progress.vocab[id];
 }
 function ensureErrorProgress(id){
@@ -314,6 +341,29 @@ function saveAll(){saveContent();saveProgress();renderAll()}
 
 function activeVocab(){return content.vocabulary.filter(v=>v.active!==false)}
 function activeErrors(){return content.errors.filter(e=>e.active!==false)}
+function localDayKey(ts=now()){
+ const d=new Date(ts);
+ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function setStudySize(n){
+ studyBatchSize=n;
+ document.querySelectorAll("[data-study-size]").forEach(b=>b.classList.toggle("active",Number(b.dataset.studySize)===n));
+ document.getElementById("studySessionHint").textContent=`本轮将抽取最多 ${n} 个尚未首次学习的新词。`;
+}
+function setTestSize(n){
+ testNewWordLimit=n;
+ document.querySelectorAll("[data-test-size]").forEach(b=>b.classList.toggle("active",Number(b.dataset.testSize)===n));
+ const eligible=activeVocab().filter(v=>{const p=ensureVocabProgress(v.id);return p.learned&&p.learnedDay===localDayKey()}).length;
+ document.getElementById("testSessionHint").textContent=`今天已完成首次学习 ${eligible} 个；本轮最多抽取 ${n} 个新词。旧词到期复习另行加入。`;
+}
+function startStudyRound(){
+ const candidates=activeVocab().filter(v=>!ensureVocabProgress(v.id).learned);
+ studyRoundIds=candidates.slice(0,studyBatchSize).map(v=>v.id);
+ studyIndex=0;
+ renderStudy();
+ const actual=studyRoundIds.length;
+ document.getElementById("studySessionHint").textContent=actual?`本轮共 ${actual} 个新词；全部来自“尚未首次学习”。`:"当前没有尚未首次学习的新词。";
+}
 function dimForTask(type){return type==="R_ZH"?"recognition":type==="A_RU"?"active":type==="G"?"government":"sense"}
 function relevantDims(v){
  const a=["recognition"];
@@ -372,7 +422,11 @@ function studyFiltered(){
  })
 }
 function renderStudy(){
- studyList=activeVocab();
+ if(!studyRoundIds.length){
+   const candidates=activeVocab().filter(v=>!ensureVocabProgress(v.id).learned);
+   studyRoundIds=candidates.slice(0,studyBatchSize).map(v=>v.id);
+ }
+ studyList=studyRoundIds.map(id=>content.vocabulary.find(v=>v.id===id)).filter(Boolean);
  if(studyIndex>=studyList.length)studyIndex=Math.max(0,studyList.length-1);
  const v=studyList[studyIndex];
  document.getElementById("studyCounter").textContent=v?`${studyIndex+1} / ${studyList.length}`:"0 / 0";
@@ -405,7 +459,7 @@ function flipStudy(){
 }
 function markLearned(){
  const v=studyList[studyIndex];if(!v||!studyFlipped)return;
- const p=ensureVocabProgress(v.id);p.learned=true;p.learnedAt=p.learnedAt||now();p.needsReconfirm=false;
+ const p=ensureVocabProgress(v.id);p.learned=true;p.learnedAt=p.learnedAt||now();p.learnedDay=p.learnedDay||localDayKey();p.needsReconfirm=false;
  relevantDims(v).forEach(k=>{const d=p.dims[k];if(d.nextReview==null)d.nextReview=now()+REVIEW_INTERVALS[0]});
  saveProgress();renderAll();renderStudy();
 }
@@ -414,7 +468,13 @@ function prevStudy(){if(studyList.length){studyIndex=(studyIndex-1+studyList.len
 function showVocabMode(m){
  studyMode.classList.toggle("hidden",m!=="study");testMode.classList.toggle("hidden",m!=="test");
  studyModeBtn.classList.toggle("active",m==="study");testModeBtn.classList.toggle("active",m==="test");
- if(m==="study")renderStudy();
+ if(m==="study"){
+   renderStudy();
+   const remaining=studyList.filter(v=>!ensureVocabProgress(v.id).learned).length;
+   document.getElementById("studySessionHint").textContent=`本轮 ${studyList.length} 个新词，尚有 ${remaining} 个未完成首次学习。`;
+ }else{
+   setTestSize(testNewWordLimit);
+ }
 }
 
 function acceptedActive(v){
@@ -427,23 +487,48 @@ function acceptedActive(v){
 function acceptedMeanings(v){
  return [...new Set([v.meaning,...(v.accepted_meanings||[])].map(normalize).filter(Boolean))]
 }
+function tasksForVocab(v,{forceAll=false}={}){
+ const p=ensureVocabProgress(v.id),tasks=[];
+ const add=(type,extra={})=>{
+   const d=p.dims[dimForTask(type)];
+   if(forceAll||isDueDim(d)||p.needsReconfirm)tasks.push({vocabId:v.id,type,...extra});
+ };
+ add("R_ZH");
+ if(v.level==="A")add("A_RU");
+ if(v.g)(v.government||[]).forEach((g,i)=>add("G",{govIndex:i}));
+ if(v.sense_question)add("SENSE");
+ return tasks;
+}
 function buildTestQueue(){
- const tasks=[];
- activeVocab().forEach(v=>{
-   const p=ensureVocabProgress(v.id);if(!p.learned)return;
-   const add=(type,extra={})=>{const d=p.dims[dimForTask(type)];if(isDueDim(d)||p.needsReconfirm)tasks.push({vocabId:v.id,type,...extra})};
-   add("R_ZH");if(v.level==="A")add("A_RU");
-   if(v.g)(v.government||[]).forEach((g,i)=>add("G",{govIndex:i}));
-   if(v.sense_question)add("SENSE");
+ const today=localDayKey();
+ const learned=activeVocab().filter(v=>ensureVocabProgress(v.id).learned);
+
+ // 1) Old/due review tasks: learned before today, or today's words whose dimensions are already due.
+ let reviewTasks=[];
+ learned.forEach(v=>{
+   const p=ensureVocabProgress(v.id);
+   const due=tasksForVocab(v,{forceAll:false});
+   if(p.learnedDay!==today) reviewTasks.push(...due);
  });
- const due=tasks.length?tasks:activeVocab().filter(v=>ensureVocabProgress(v.id).learned).flatMap(v=>{
-   const a=[{vocabId:v.id,type:"R_ZH"}];if(v.level==="A")a.push({vocabId:v.id,type:"A_RU"});if(v.g&&(v.government||[]).length)a.push({vocabId:v.id,type:"G",govIndex:0});if(v.sense_question)a.push({vocabId:v.id,type:"SENSE"});return a
- });
- return due.sort(()=>Math.random()-.5)
+
+ // 2) Today's newly learned words: choose at most 10/20/30 WORDS.
+ // A selected word can generate multiple tasks (R/A/G/sense).
+ const todaysNew=learned.filter(v=>ensureVocabProgress(v.id).learnedDay===today);
+ const selectedNew=todaysNew.slice(0,testNewWordLimit);
+ let newTasks=[];
+ selectedNew.forEach(v=>newTasks.push(...tasksForVocab(v,{forceAll:true})));
+
+ // If a today's-new word has already been tested in this session and is now due because of an error,
+ // retry insertion is handled later by checkTest().
+ return [...reviewTasks.sort(()=>Math.random()-.5),...newTasks.sort(()=>Math.random()-.5)];
 }
 function startTest(){
+ const eligible=activeVocab().filter(v=>{const p=ensureVocabProgress(v.id);return p.learned&&p.learnedDay===localDayKey()}).length;
+ document.getElementById("testSessionHint").textContent=eligible<testNewWordLimit
+   ? `今天只完成了 ${eligible} 个新词的首次学习，因此本轮新词最多测试 ${eligible} 个；不会加入未学习词。旧词到期复习照常加入。`
+   : `本轮测试 ${testNewWordLimit} 个今天新学词；旧词到期复习照常加入。`;
  testQueue=buildTestQueue();startTestBtn.classList.add("hidden");nextTestBtn.classList.add("hidden");
- if(!testQueue.length){testQuestion.textContent="还没有可测试内容。";startTestBtn.classList.remove("hidden");return}
+ if(!testQueue.length){testQuestion.textContent="还没有可测试内容。先完成新词首次学习，或等待旧词复习到期。";startTestBtn.classList.remove("hidden");return}
  loadNextTest();
 }
 function loadNextTest(){
@@ -621,7 +706,7 @@ backupBtn.onclick=()=>{
  showModal(`<h3>最近自动备份</h3>${b.length?b.map((x,i)=>`<div class="item" style="margin-top:8px"><b>${new Date(x.time).toLocaleString("zh-CN")}</b><div class="item-meta">备份 ${i+1} · ${x.content.vocabulary.length} 词 · ${x.content.errors.length} 错题</div><button class="btn" style="margin-top:8px" onclick="restoreBackup(${i})">恢复此备份</button></div>`).join(""):'<div class="small">还没有自动备份。第一次导入学习包前会自动建立。</div>'}<div class="modal-actions"><button class="btn" onclick="hideModal()">关闭</button></div>`);
 }
 function restoreBackup(i){const b=getBackups()[i];if(!b)return;content=clone(b.content);progress=clone(b.progress);saveAll();hideModal()}
-resetBtn.onclick=()=>{if(confirm("确定重置为示例数据吗？当前本地学习数据会清空。")){content=clone(SAMPLE_CONTENT);progress={vocab:{},errors:{}};saveAll()}}
+resetBtn.onclick=()=>{if(confirm("确定重置为示例数据吗？当前本地学习数据会清空。")){content=clone(SAMPLE_CONTENT);progress={vocab:{},errors:{}};studyRoundIds=[];studyIndex=0;saveAll()}}
 
 function renderAll(){
  renderHome();renderStudy();
@@ -629,6 +714,9 @@ function renderAll(){
  if(!vocabLibrary.classList.contains("hidden"))renderVocabLibrary();
  if(!errorLibrary.classList.contains("hidden"))renderErrorLibrary();
 }
+setStudySize(10);
+setTestSize(10);
+startStudyRound();
 renderAll();
 </script>
 </body>
