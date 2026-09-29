@@ -1,685 +1,634 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>小许 A2 学习系统</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>小许 A2 学习系统 v2</title>
 <style>
 :root{
-  --bg:#f6f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;
-  --primary:#4f46e5;--primary2:#eef2ff;--good:#15803d;--bad:#b91c1c;--warn:#b45309;
+ --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
+ --primary:#5547e8;--primary-soft:#efefff;--good:#167a45;--good-bg:#ecf9f1;
+ --bad:#b53636;--bad-bg:#fff0f0;--warn:#9a6200;--warn-bg:#fff7df;
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;background:var(--bg);color:var(--text)}
-button,input,textarea,select{font:inherit}
-button{cursor:pointer}
-.app{max-width:1080px;margin:0 auto;padding:24px}
-header{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}
-h1{font-size:24px;margin:0}.sub{color:var(--muted);font-size:14px;margin-top:4px}
-.actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn{border:1px solid var(--line);background:#fff;padding:9px 13px;border-radius:10px}
-.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
-.btn.soft{background:var(--primary2);border-color:#c7d2fe;color:#3730a3}
-.btn.danger{color:var(--bad)}
-.tabs{display:flex;gap:8px;margin:12px 0 20px}
-.tab{border:none;background:transparent;padding:10px 15px;border-radius:10px;color:var(--muted)}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif}
+button,input,select{font:inherit} button{cursor:pointer}
+.app{max-width:1040px;margin:0 auto;padding:18px 16px 90px}
+header{padding:6px 2px 12px}
+h1{margin:0;font-size:24px}.sub{font-size:13px;color:var(--muted);margin-top:4px}
+.tabs{display:flex;gap:6px;margin:4px 0 16px;position:sticky;top:0;background:rgba(246,247,251,.94);backdrop-filter:blur(7px);padding:8px 0;z-index:3}
+.tab{border:0;background:transparent;padding:9px 14px;border-radius:10px;color:var(--muted)}
 .tab.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.stat,.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
-.stat b{font-size:28px;display:block;margin-top:8px}.stat span{font-size:13px;color:var(--muted)}
-.panel{margin-top:14px}
-.panel h2{font-size:18px;margin:0 0 14px}
-.hidden{display:none!important}
-.word-card{min-height:330px;display:flex;flex-direction:column;justify-content:space-between}
-.word-main{text-align:center;padding:28px 10px}
-.word-main .word{font-size:36px;font-weight:700}
-.word-main .meta{margin-top:10px;color:var(--muted)}
+.panel,.stat{background:var(--card);border:1px solid var(--line);border-radius:16px}
+.panel{padding:16px;margin-top:12px}.panel h2{font-size:18px;margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{padding:15px}.stat span{font-size:12px;color:var(--muted)}.stat b{display:block;font-size:26px;margin-top:5px}
+.btn{border:1px solid var(--line);background:#fff;padding:9px 13px;border-radius:10px;color:var(--text)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.soft{background:var(--primary-soft);border-color:#cbc8ff;color:#3f35ba}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.small{font-size:12px;color:var(--muted)}.hidden{display:none!important}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.item{border:1px solid var(--line);border-radius:12px;padding:13px;background:#fff}
+.item-title{font-weight:700}.item-meta{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.55}
+.word-card{min-height:370px;display:flex;flex-direction:column;justify-content:space-between}
+.counter{text-align:center;font-size:12px;color:var(--muted);margin-top:2px}
+.word-main{text-align:center;padding:28px 8px 8px}
+.word{font-size:38px;font-weight:760;letter-spacing:.2px}
+.meta{color:var(--muted);margin-top:7px;font-size:14px}
 .badges{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
-.badge{padding:4px 8px;border-radius:999px;background:#f3f4f6;font-size:12px}
-.badge.a{background:#fee2e2;color:#991b1b}.badge.r{background:#dbeafe;color:#1d4ed8}.badge.g{background:#dcfce7;color:#166534}
-.answer{border-top:1px solid var(--line);padding-top:16px;margin-top:14px}
-.detail-row{margin:8px 0}.detail-label{color:var(--muted);font-size:13px}
-.controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
-.test-box{max-width:700px;margin:0 auto}
-.question{font-size:23px;font-weight:650;line-height:1.5;margin:12px 0 18px}
-.answer-input{width:100%;padding:12px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#fff}
-.feedback{margin-top:12px;padding:12px;border-radius:10px}
-.feedback.good{background:#ecfdf5;color:#166534}.feedback.bad{background:#fef2f2;color:#991b1b}
-.option-list{display:grid;gap:8px}.option{padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff;text-align:left}
-.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-.small{font-size:13px;color:var(--muted)}
-.list{display:grid;gap:10px}
-.item{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}
-.item-top{display:flex;justify-content:space-between;gap:10px}
-.item-title{font-weight:650}.item-meta{font-size:12px;color:var(--muted);margin-top:5px}
-.progress{height:8px;background:#eef2f7;border-radius:999px;overflow:hidden}
-.progress>div{height:100%;background:var(--primary)}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-hr{border:none;border-top:1px solid var(--line);margin:16px 0}
-code{background:#f3f4f6;padding:2px 5px;border-radius:5px}
-@media(max-width:760px){
- .app{padding:14px}.grid{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}
- header{align-items:flex-start;flex-direction:column}.word-main .word{font-size:30px}
+.badge{font-size:12px;border-radius:999px;padding:4px 8px;background:#f1f3f6}
+.badge.a{background:#ffe2e2;color:#a82e2e}.badge.r{background:#e5efff;color:#2e5db4}.badge.g{background:#dcf7e6;color:#187341}
+.answer{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;line-height:1.65}
+.detail-label{font-size:12px;color:var(--muted);margin-top:8px}
+.nav-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;max-width:520px;margin:18px auto 0}
+.nav-row .btn:nth-child(2){justify-self:stretch}
+.complete-row{display:flex;justify-content:center;margin-top:10px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mode-switch{display:flex;gap:4px;background:#f2f4f8;padding:4px;border-radius:11px;width:max-content}
+.mode-btn{border:0;background:transparent;border-radius:8px;padding:8px 14px;color:var(--muted)}
+.mode-btn.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.test-box{max-width:720px;margin:0 auto;padding:8px 0}
+.question{font-size:23px;font-weight:720;line-height:1.45;margin:12px 0 16px}
+.answer-input{width:100%;border:1px solid #cbd3df;border-radius:10px;padding:12px 13px}
+.feedback{padding:12px;border-radius:10px;margin-top:12px;line-height:1.6}.feedback.good{background:var(--good-bg);color:var(--good)}.feedback.bad{background:var(--bad-bg);color:var(--bad)}
+.option-list{display:grid;gap:8px}.option{border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px;text-align:left}
+.library-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:transparent;padding:2px 0;font-weight:700;color:var(--text)}
+.library-body{margin-top:12px}
+.search{flex:1;min-width:160px;border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+select{border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:#fff}
+.slider-wrap{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:12px 0}
+input[type="range"]{width:100%}
+.library-list{display:grid;gap:8px}
+.list-card{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff}
+.list-top{display:flex;justify-content:space-between;gap:12px}
+.list-word{font-weight:700}
+.library-summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.chip{padding:5px 8px;background:#f1f3f7;border-radius:999px;font-size:12px}
+.footer-tools{margin-top:20px;padding:16px;background:#fff;border:1px solid var(--line);border-radius:16px}
+.footer-tools .toolbar{justify-content:center}
+.footer-title{text-align:center;font-weight:700;margin-bottom:8px}
+.footer-note{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.modal-mask{position:fixed;inset:0;background:rgba(17,24,39,.38);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal{background:#fff;width:min(620px,100%);max-height:88vh;overflow:auto;border-radius:16px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.modal h3{margin:0 0 12px}.modal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.modal-stat{background:#f7f8fb;border-radius:10px;padding:10px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.notice{padding:10px 12px;border-radius:10px;background:var(--warn-bg);color:var(--warn);font-size:12px;line-height:1.5}
+hr{border:0;border-top:1px solid var(--line);margin:15px 0}
+@media(max-width:720px){
+ .app{padding:10px 10px 80px}.grid{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}
+ .word{font-size:32px}.word-card{min-height:330px}.nav-row{gap:8px}.btn{padding:9px 10px}
+ .question{font-size:21px}.panel{padding:13px}.modal-grid{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
 <body>
 <div class="app">
-  <header>
-    <div>
-      <h1>小许 A2 学习系统</h1>
-      <div class="sub">单词 · 测试 · 错题 · 间隔复习</div>
-    </div>
-    <div class="actions">
-      <button class="btn" id="importBtn">导入学习包</button>
-      <button class="btn" id="exportBtn">导出进度</button>
-      <button class="btn danger" id="resetBtn">重置示例</button>
-      <input id="fileInput" type="file" accept=".json" class="hidden" />
-    </div>
-  </header>
+<header>
+  <h1>小许 A2 学习系统</h1>
+  <div class="sub">单词 · 测试 · 错题 · 间隔复习</div>
+</header>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="home">首页</button>
-    <button class="tab" data-tab="vocab">单词</button>
-    <button class="tab" data-tab="errors">错题</button>
+<div class="tabs">
+  <button class="tab active" data-tab="home">首页</button>
+  <button class="tab" data-tab="vocab">单词</button>
+  <button class="tab" data-tab="errors">错题</button>
+</div>
+
+<section id="home" class="view">
+  <div class="grid">
+    <div class="stat"><span>今日到期单词</span><b id="statDueVocab">0</b></div>
+    <div class="stat"><span>薄弱维度</span><b id="statWeak">0</b></div>
+    <div class="stat"><span>待复习错题</span><b id="statDueErrors">0</b></div>
+    <div class="stat"><span>已学习单词</span><b id="statLearned">0</b></div>
   </div>
-
-  <section id="home" class="view">
-    <div class="grid">
-      <div class="stat"><span>今日到期单词</span><b id="statDueVocab">0</b></div>
-      <div class="stat"><span>薄弱词</span><b id="statWeak">0</b></div>
-      <div class="stat"><span>待复习错题</span><b id="statDueErrors">0</b></div>
-      <div class="stat"><span>已学习单词</span><b id="statLearned">0</b></div>
-    </div>
-    <div class="panel">
-      <h2>今天做什么</h2>
-      <div class="two">
-        <div class="item">
-          <div class="item-title">📖 单词学习 / 复习</div>
-          <div class="item-meta" id="homeVocabHint"></div>
-          <div class="controls" style="justify-content:flex-start">
-            <button class="btn primary" onclick="goTab('vocab');showVocabMode('study')">开始学习</button>
-            <button class="btn soft" onclick="goTab('vocab');showVocabMode('test')">开始测试</button>
-          </div>
+  <div class="panel">
+    <h2>今天做什么</h2>
+    <div class="two">
+      <div class="item">
+        <div class="item-title">📖 单词</div>
+        <div class="item-meta" id="homeVocabHint"></div>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn primary" onclick="goTab('vocab');showVocabMode('study')">继续学习</button>
+          <button class="btn soft" onclick="goTab('vocab');showVocabMode('test')">开始测试</button>
         </div>
-        <div class="item">
-          <div class="item-title">✏️ 错题复习</div>
-          <div class="item-meta" id="homeErrorHint"></div>
-          <div class="controls" style="justify-content:flex-start">
-            <button class="btn primary" onclick="goTab('errors');startErrorReview()">开始复习</button>
-          </div>
+      </div>
+      <div class="item">
+        <div class="item-title">✏️ 错题</div>
+        <div class="item-meta" id="homeErrorHint"></div>
+        <div class="toolbar" style="margin-top:10px">
+          <button class="btn primary" onclick="goTab('errors');startErrorReview()">复习到期错题</button>
         </div>
       </div>
     </div>
-    <div class="panel">
-      <h2>复习逻辑</h2>
-      <div class="small">
-        采用“遗忘曲线思路”的间隔复习：首次学习后先短间隔回顾，连续答对后逐步拉长；
-        答错会缩短间隔，并在当前测试轮稍后再次出现。这里不是声称存在唯一固定的“艾宾浩斯标准间隔”，而是用其遗忘规律做实用化调度。
-      </div>
+  </div>
+</section>
+
+<section id="vocab" class="view hidden">
+  <div class="panel">
+    <div class="mode-switch">
+      <button class="mode-btn active" id="studyModeBtn" onclick="showVocabMode('study')">学习</button>
+      <button class="mode-btn" id="testModeBtn" onclick="showVocabMode('test')">测试</button>
     </div>
-  </section>
 
-  <section id="vocab" class="view hidden">
-    <div class="panel">
-      <div class="toolbar">
-        <button class="btn primary" onclick="showVocabMode('study')">学习</button>
-        <button class="btn" onclick="showVocabMode('test')">测试</button>
-        <select id="vocabFilter">
-          <option value="all">全部</option>
-          <option value="new">尚未学习</option>
-          <option value="due">今日到期</option>
-          <option value="weak">薄弱词</option>
-          <option value="A">A 主动词</option>
-          <option value="R">R 识别词</option>
-          <option value="G">G 格支配</option>
-        </select>
-        <span class="small" id="vocabCount"></span>
-      </div>
-
-      <div id="studyMode">
-        <div class="word-card">
-          <div>
-            <div class="word-main">
-              <div class="word" id="studyWord">—</div>
-              <div class="meta" id="studyMeta"></div>
-              <div class="badges" id="studyBadges"></div>
-            </div>
-            <div id="studyAnswer" class="answer hidden"></div>
+    <div id="studyMode">
+      <div class="word-card">
+        <div>
+          <div class="counter" id="studyCounter">0 / 0</div>
+          <div class="word-main">
+            <div class="word" id="studyWord">—</div>
+            <div class="meta" id="studyMeta"></div>
+            <div class="badges" id="studyBadges"></div>
           </div>
-          <div class="controls">
+          <div id="studyAnswer" class="answer hidden"></div>
+        </div>
+        <div>
+          <div class="nav-row">
             <button class="btn" onclick="prevStudy()">← 上一个</button>
             <button class="btn primary" id="flipBtn" onclick="flipStudy()">翻转</button>
-            <button class="btn soft hidden" id="learnedBtn" onclick="markLearned()">完成首次学习</button>
             <button class="btn" onclick="nextStudy()">下一个 →</button>
           </div>
-        </div>
-      </div>
-
-      <div id="testMode" class="hidden">
-        <div class="test-box">
-          <div class="small" id="testType"></div>
-          <div class="question" id="testQuestion">点击“开始测试”</div>
-          <div id="testOptions" class="option-list hidden"></div>
-          <input id="testInput" class="answer-input" placeholder="输入答案后按 Enter" />
-          <div id="testFeedback"></div>
-          <div class="controls">
-            <button class="btn primary" id="startTestBtn" onclick="startTest()">开始测试</button>
-            <button class="btn soft hidden" id="nextTestBtn" onclick="nextTest()">下一题</button>
+          <div class="complete-row">
+            <button class="btn soft hidden" id="learnedBtn" onclick="markLearned()">完成首次学习</button>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="panel">
-      <h2>单词库</h2>
-      <div id="vocabList" class="list"></div>
+    <div id="testMode" class="hidden">
+      <div class="test-box">
+        <div class="small" id="testType"></div>
+        <div class="question" id="testQuestion">点击“开始测试”</div>
+        <div id="testOptions" class="option-list hidden"></div>
+        <input id="testInput" class="answer-input" placeholder="输入答案后按 Enter">
+        <div id="testFeedback"></div>
+        <div class="toolbar" style="justify-content:center;margin-top:14px">
+          <button class="btn primary" id="startTestBtn" onclick="startTest()">开始测试</button>
+          <button class="btn soft hidden" id="nextTestBtn" onclick="nextTest()">下一题</button>
+        </div>
+      </div>
     </div>
-  </section>
+  </div>
 
-  <section id="errors" class="view hidden">
-    <div class="panel">
+  <div class="panel">
+    <button class="library-toggle" onclick="toggleLibrary('vocab')">
+      <span>▸ 单词库总览 <span class="small" id="vocabTotalLabel"></span></span>
+      <span class="small" id="vocabToggleLabel">展开</span>
+    </button>
+    <div id="vocabLibrary" class="library-body hidden">
+      <div class="library-summary" id="vocabSummary"></div>
       <div class="toolbar">
-        <button class="btn primary" onclick="startErrorReview()">复习到期错题</button>
-        <select id="errorFilter" onchange="renderErrorList()">
+        <input id="vocabSearch" class="search" placeholder="搜索单词 / 中文 / 来源">
+        <select id="vocabFilter">
+          <option value="all">全部</option>
+          <option value="new">未学</option>
+          <option value="due">今日到期</option>
+          <option value="weak">薄弱</option>
+          <option value="A">A 主动</option>
+          <option value="R">R 识别</option>
+          <option value="G">G 格支配</option>
+          <option value="archived">已归档</option>
+        </select>
+      </div>
+      <div class="slider-wrap">
+        <span class="small">1</span>
+        <input id="vocabSlider" type="range" min="0" max="0" value="0">
+        <span class="small" id="vocabSliderLabel">0 / 0</span>
+      </div>
+      <div id="vocabList" class="library-list"></div>
+    </div>
+  </div>
+</section>
+
+<section id="errors" class="view hidden">
+  <div class="panel">
+    <div class="toolbar">
+      <button class="btn primary" onclick="startErrorReview()">复习到期错题</button>
+    </div>
+    <div id="errorReview" class="hidden">
+      <div class="test-box">
+        <div class="small" id="errorMeta"></div>
+        <div class="question" id="errorQuestion"></div>
+        <input id="errorInput" class="answer-input" placeholder="输入你的答案">
+        <div id="errorFeedback"></div>
+        <div class="toolbar" style="justify-content:center;margin-top:14px">
+          <button class="btn primary" id="checkErrorBtn" onclick="checkError()">提交</button>
+          <button class="btn soft hidden" id="nextErrorBtn" onclick="nextError()">下一题</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <button class="library-toggle" onclick="toggleLibrary('error')">
+      <span>▸ 错题库总览 <span class="small" id="errorTotalLabel"></span></span>
+      <span class="small" id="errorToggleLabel">展开</span>
+    </button>
+    <div id="errorLibrary" class="library-body hidden">
+      <div class="library-summary" id="errorSummary"></div>
+      <div class="toolbar">
+        <input id="errorSearch" class="search" placeholder="搜索题目 / 标签 / 来源">
+        <select id="errorFilter">
           <option value="all">全部</option>
           <option value="due">待复习</option>
           <option value="learning">巩固中</option>
           <option value="mastered">已掌握</option>
+          <option value="archived">已归档</option>
         </select>
+        <select id="errorTagFilter"><option value="all">全部知识点</option></select>
       </div>
-      <div id="errorReview" class="hidden">
-        <div class="test-box">
-          <div class="small" id="errorMeta"></div>
-          <div class="question" id="errorQuestion"></div>
-          <input id="errorInput" class="answer-input" placeholder="输入你的答案" />
-          <div id="errorFeedback"></div>
-          <div class="controls">
-            <button class="btn primary" id="checkErrorBtn" onclick="checkError()">提交</button>
-            <button class="btn soft hidden" id="nextErrorBtn" onclick="nextError()">下一题</button>
-          </div>
-        </div>
-        <hr />
+      <div class="slider-wrap">
+        <span class="small">1</span>
+        <input id="errorSlider" type="range" min="0" max="0" value="0">
+        <span class="small" id="errorSliderLabel">0 / 0</span>
       </div>
-      <div id="errorList" class="list"></div>
+      <div id="errorList" class="library-list"></div>
     </div>
-  </section>
+  </div>
+</section>
+
+<div class="footer-tools">
+  <div class="footer-title">数据与学习包</div>
+  <div class="toolbar">
+    <button class="btn primary" id="importBtn">导入学习包</button>
+    <button class="btn" id="exportBtn">导出完整进度</button>
+    <button class="btn" id="backupBtn">查看备份</button>
+    <button class="btn" id="resetBtn">重置示例</button>
+    <input id="fileInput" type="file" accept=".json" class="hidden">
+  </div>
+  <div class="footer-note">导入前会自动备份；更新词条内容不会覆盖既有学习进度。为避免长期占空间，只保留最近 5 份自动备份。</div>
+</div>
 </div>
 
+<div id="modalMask" class="modal-mask hidden"><div class="modal" id="modal"></div></div>
+
 <script>
-const SAMPLE = {"schema_version": "1.0", "student": "小许", "batch": "XUXU-A2-VOCAB-001", "vocabulary": [{"id": "v001", "word": "встреча́ть", "plain": "встречать", "pos": "动词", "level": "A", "g": true, "meaning": "接、迎接；遇见", "aspect": {"impf": "встреча́ть", "pf": "встре́тить"}, "government": [{"pattern": "встреча́ть кого? что?", "case": "винительный", "case_no": 4, "case_cn": "四格"}], "usage": ["встреча́ть друга", "встреча́ть гостей"], "example": "Я встреча́ю друга на вокза́ле.", "source": "示例词库", "sense_question": null}, {"id": "v002", "word": "горди́ться", "plain": "гордиться", "pos": "动词", "level": "A", "g": true, "meaning": "为……感到骄傲", "aspect": {"impf": "горди́ться", "pf": null}, "government": [{"pattern": "горди́ться кем? чем?", "case": "творительный", "case_no": 5, "case_cn": "五格"}], "usage": ["горди́ться сы́ном", "горди́ться свои́ми ученика́ми"], "example": "Она́ горди́тся свои́м сы́ном.", "source": "示例词库", "sense_question": null}, {"id": "v003", "word": "экску́рсия", "plain": "экскурсия", "pos": "名词", "level": "R", "g": false, "meaning": "参观；游览；讲解活动", "aspect": null, "government": [], "usage": ["ходи́ть на экску́рсию", "интере́сная экску́рсия"], "example": "Сего́дня в музе́е интере́сная экску́рсия.", "source": "示例词库", "sense_question": null}, {"id": "v004", "word": "плати́ть", "plain": "платить", "pos": "动词", "level": "A", "g": true, "meaning": "支付；付款", "aspect": {"impf": "плати́ть", "pf": "заплати́ть"}, "government": [{"pattern": "плати́ть за кого? за что?", "case": "винительный", "case_no": 4, "case_cn": "四格"}, {"pattern": "плати́ть кому?", "case": "дательный", "case_no": 3, "case_cn": "三格"}], "usage": ["плати́ть за биле́т", "плати́ть врачу́"], "example": "Я заплати́л за биле́т.", "source": "示例词库", "sense_question": {"prompt": "“плати́ть” 和 “купи́ть” 哪个表示“付款/支付”而不是“购买”？", "options": ["плати́ть", "купи́ть"], "answer": "плати́ть"}}, {"id": "v005", "word": "одева́ть", "plain": "одевать", "pos": "动词", "level": "A", "g": true, "meaning": "给某人穿衣服", "aspect": {"impf": "одева́ть", "pf": "оде́ть"}, "government": [{"pattern": "одева́ть кого?", "case": "винительный", "case_no": 4, "case_cn": "四格"}], "usage": ["одева́ть ребёнка"], "example": "Ма́ма одева́ет ребёнка.", "source": "示例词库", "sense_question": {"prompt": "“自己穿上外套”更适合用哪个动词？", "options": ["одева́ть", "надева́ть"], "answer": "надева́ть"}}, {"id": "v006", "word": "похо́жий", "plain": "похожий", "pos": "形容词", "level": "R", "g": true, "meaning": "相像的；类似的", "aspect": null, "government": [{"pattern": "похо́жий на кого? на что?", "case": "винительный", "case_no": 4, "case_cn": "四格"}], "usage": ["похо́жий на ма́му", "э́ти слова́ похо́жи"], "example": "Он похо́ж на отца́.", "source": "示例词库", "sense_question": null}], "errors": [{"id": "e001", "prompt": "Анна вчера ___ в театр.", "student_answer": "ходил", "correct_answer": "ходила", "explanation": "过去时需要和主语在性、数上保持一致；Анна 是阴性单数，所以用 ходила。", "tags": ["过去时", "性数一致"], "source": "示例错题"}, {"id": "e002", "prompt": "Мы едем ___ метро.", "student_answer": "в", "correct_answer": "на метро", "explanation": "表示乘坐交通工具时常用 на + 前置格：на метро, на автобусе。", "tags": ["介词", "交通工具"], "source": "示例错题"}, {"id": "e003", "prompt": "Я горжусь ___ . (мой брат)", "student_answer": "мой брат", "correct_answer": "моим братом", "explanation": "гордиться кем? чем? 要求工具格（五格）。", "tags": ["格支配", "五格"], "source": "示例错题"}]};
-const REVIEW_INTERVALS = [
-  10 * 60 * 1000,      // 10 min
-  24 * 60 * 60 * 1000, // 1 day
-  3 * 24 * 60 * 60 * 1000,
-  7 * 24 * 60 * 60 * 1000,
-  14 * 24 * 60 * 60 * 1000,
-  30 * 24 * 60 * 60 * 1000,
-  60 * 24 * 60 * 60 * 1000
-];
-const ERROR_INTERVALS = [
-  24 * 60 * 60 * 1000,
-  3 * 24 * 60 * 60 * 1000,
-  7 * 24 * 60 * 60 * 1000,
-  14 * 24 * 60 * 60 * 1000,
-  30 * 24 * 60 * 60 * 1000
-];
+const SAMPLE_CONTENT = {"schema_version": "2.0", "student": "小许", "batch": "XUXU-A2-VOCAB-001", "vocabulary": [{"id": "XU-V-000001", "word": "встреча́ть", "plain": "встречать", "pos": "动词", "level": "A", "g": true, "meaning": "接、迎接；遇见", "accepted_meanings": ["接", "迎接", "遇见", "接人"], "aspect": {"impf": "встреча́ть", "pf": "встре́тить"}, "accepted_active_answers": ["встречать", "встретить"], "government": [{"pattern": "встреча́ть кого? что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "винительный падеж", "4", "4格", "四格", "кого", "что", "кого? что?"]}], "usage": ["встреча́ть друга", "встреча́ть гостей"], "example": "Я встреча́ю друга на вокза́ле.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000002", "word": "горди́ться", "plain": "гордиться", "pos": "动词", "level": "A", "g": true, "meaning": "为……感到骄傲", "accepted_meanings": ["为……感到骄傲", "感到骄傲", "以……为傲"], "aspect": {"impf": "горди́ться", "pf": null}, "accepted_active_answers": ["гордиться"], "government": [{"pattern": "горди́ться кем? чем?", "case": "творительный", "case_no": 5, "case_cn": "五格", "accepted_answers": ["творительный", "творительный падеж", "5", "5格", "五格", "кем", "чем", "кем? чем?"]}], "usage": ["горди́ться сы́ном", "горди́ться свои́ми ученика́ми"], "example": "Она́ горди́тся свои́м сы́ном.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000003", "word": "экску́рсия", "plain": "экскурсия", "pos": "名词", "level": "R", "g": false, "meaning": "参观；游览；讲解活动", "accepted_meanings": ["参观", "游览", "讲解活动", "参观活动", "游览活动"], "aspect": null, "accepted_active_answers": [], "government": [], "usage": ["ходи́ть на экску́рсию", "интере́сная экску́рсия"], "example": "Сего́дня в музе́е интере́сная экску́рсия.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000004", "word": "плати́ть", "plain": "платить", "pos": "动词", "level": "A", "g": true, "meaning": "支付；付款", "accepted_meanings": ["支付", "付款", "付钱"], "aspect": {"impf": "плати́ть", "pf": "заплати́ть"}, "accepted_active_answers": ["платить", "заплатить"], "government": [{"pattern": "плати́ть за кого? за что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого", "что", "кого? что?"]}, {"pattern": "плати́ть кому?", "case": "дательный", "case_no": 3, "case_cn": "三格", "accepted_answers": ["дательный", "3", "3格", "三格", "кому"]}], "usage": ["плати́ть за биле́т", "плати́ть врачу́"], "example": "Я заплати́л за биле́т.", "source": "示例词库", "sense_question": {"prompt": "“плати́ть” 和 “купи́ть” 哪个表示“付款/支付”而不是“购买”？", "options": ["плати́ть", "купи́ть"], "answer": "плати́ть"}, "revision": 1, "active": true}, {"id": "XU-V-000005", "word": "одева́ть", "plain": "одевать", "pos": "动词", "level": "A", "g": true, "meaning": "给某人穿衣服", "accepted_meanings": ["给某人穿衣服", "给……穿衣"], "aspect": {"impf": "одева́ть", "pf": "оде́ть"}, "accepted_active_answers": ["одевать", "одеть"], "government": [{"pattern": "одева́ть кого?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого"]}], "usage": ["одева́ть ребёнка"], "example": "Ма́ма одева́ет ребёнка.", "source": "示例词库", "sense_question": {"prompt": "“自己穿上外套”更适合用哪个动词？", "options": ["одева́ть", "надева́ть"], "answer": "надева́ть"}, "revision": 1, "active": true}, {"id": "XU-V-000006", "word": "похо́жий", "plain": "похожий", "pos": "形容词", "level": "R", "g": true, "meaning": "相像的；类似的", "accepted_meanings": ["相像的", "类似的", "相似的"], "aspect": null, "accepted_active_answers": [], "government": [{"pattern": "похо́жий на кого? на что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого", "что", "кого? что?"]}], "usage": ["похо́жий на ма́му", "э́ти слова́ похо́жи"], "example": "Он похо́ж на отца́.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}], "errors": [{"id": "XU-E-000001", "prompt": "Анна вчера ___ в театр.", "student_answer": "ходил", "correct_answer": "ходила", "accepted_answers": ["ходила"], "explanation": "过去时需要和主语在性、数上保持一致；Анна 是阴性单数，所以用 ходила。", "tags": ["过去时", "性数一致"], "source": "示例错题", "revision": 1, "active": true}, {"id": "XU-E-000002", "prompt": "Мы едем ___ метро.", "student_answer": "в", "correct_answer": "на метро", "accepted_answers": ["на метро"], "explanation": "表示乘坐交通工具时常用 на + 前置格：на метро, на автобусе。", "tags": ["介词", "交通工具"], "source": "示例错题", "revision": 1, "active": true}, {"id": "XU-E-000003", "prompt": "Я горжусь ___ . (мой брат)", "student_answer": "мой брат", "correct_answer": "моим братом", "accepted_answers": ["моим братом"], "explanation": "гордиться кем? чем? 要求工具格（五格）。", "tags": ["格支配", "五格"], "source": "示例错题", "revision": 1, "active": true}]};
+const STORAGE = {
+  content:"xiaoxu_v2_content",
+  progress:"xiaoxu_v2_progress",
+  backups:"xiaoxu_v2_backups"
+};
+const VISIBLE_BATCH = 60;
+const REVIEW_INTERVALS=[10*60e3,24*60*60e3,3*864e5,7*864e5,14*864e5,30*864e5,60*864e5];
+const ERROR_INTERVALS=[24*60*60e3,3*864e5,7*864e5,14*864e5,30*864e5];
 
-let db = loadDB();
-let studyIndex = 0;
-let currentStudyList = [];
-let testQueue = [];
-let currentTest = null;
-let errorQueue = [];
-let currentError = null;
+let content=loadContent();
+let progress=loadProgress();
+let studyIndex=0, studyList=[], studyFlipped=false;
+let testQueue=[], currentTest=null;
+let errorQueue=[], currentError=null;
 
-function now(){ return Date.now(); }
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function now(){return Date.now()}
 function normalize(s){
-  return String(s ?? "")
-    .toLowerCase()
-    .replace(/[́̀]/g,"")
-    .replace(/ё/g,"е")
-    .replace(/[.,!?;:"'“”‘’()]/g," ")
-    .replace(/\s+/g," ")
-    .trim();
+ return String(s??"").toLowerCase()
+ .replace(/[́̀]/g,"").replace(/ё/g,"е")
+ .replace(/[.,!?;:"'“”‘’()]/g," ").replace(/\s+/g," ").trim();
 }
-function deepClone(x){ return JSON.parse(JSON.stringify(x)); }
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function fmt(ts){if(!ts)return"未安排";return new Date(ts).toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"})}
 
-function initProgress(data){
-  data.vocabulary = (data.vocabulary||[]).map(v => ({
-    ...v,
-    progress: v.progress || {
-      learned:false, stage:0, nextReview:null, correct:0, wrong:0, lapses:0,
-      lastResult:null, lastTestType:null
-    }
-  }));
-  data.errors = (data.errors||[]).map(e => ({
-    ...e,
-    progress:e.progress || {
-      stage:0, nextReview:Date.now(), correct:0, wrong:0, status:"due"
-    }
-  }));
-  return data;
+function loadContent(){
+ try{const x=JSON.parse(localStorage.getItem(STORAGE.content));if(x)return x}catch(e){}
+ localStorage.setItem(STORAGE.content,JSON.stringify(SAMPLE_CONTENT));return clone(SAMPLE_CONTENT);
 }
-function loadDB(){
-  const saved = localStorage.getItem("xiaoxu_a2_db");
-  if(saved){
-    try{return initProgress(JSON.parse(saved));}catch(e){}
-  }
-  const d=initProgress(deepClone(SAMPLE));
-  localStorage.setItem("xiaoxu_a2_db",JSON.stringify(d));
-  return d;
+function defaultDim(){return{stage:0,nextReview:null,correct:0,wrong:0,streak:0,recent:[]}}
+function ensureVocabProgress(id){
+ if(!progress.vocab[id])progress.vocab[id]={learned:false,learnedAt:null,needsReconfirm:false,dims:{recognition:defaultDim(),active:defaultDim(),government:defaultDim(),sense:defaultDim()}};
+ return progress.vocab[id];
 }
-function saveDB(){
-  localStorage.setItem("xiaoxu_a2_db",JSON.stringify(db));
-  renderAll();
+function ensureErrorProgress(id){
+ if(!progress.errors[id])progress.errors[id]={stage:0,nextReview:now(),correct:0,wrong:0,status:"due",recent:[],needsReconfirm:false};
+ return progress.errors[id];
 }
+function loadProgress(){
+ let p={vocab:{},errors:{}};
+ try{const x=JSON.parse(localStorage.getItem(STORAGE.progress));if(x)p=x}catch(e){}
+ if(!p.vocab)p.vocab={};if(!p.errors)p.errors={};
+ return p;
+}
+function saveProgress(){localStorage.setItem(STORAGE.progress,JSON.stringify(progress))}
+function saveContent(){localStorage.setItem(STORAGE.content,JSON.stringify(content))}
+function saveAll(){saveContent();saveProgress();renderAll()}
 
-function isDue(p){
-  return p.learned && p.nextReview != null && p.nextReview <= now();
+function activeVocab(){return content.vocabulary.filter(v=>v.active!==false)}
+function activeErrors(){return content.errors.filter(e=>e.active!==false)}
+function dimForTask(type){return type==="R_ZH"?"recognition":type==="A_RU"?"active":type==="G"?"government":"sense"}
+function relevantDims(v){
+ const a=["recognition"];
+ if(v.level==="A")a.push("active");
+ if(v.g&&(v.government||[]).length)a.push("government");
+ if(v.sense_question)a.push("sense");
+ return a;
 }
-function isWeak(v){
-  const p=v.progress;
-  return p.wrong>=2 || p.lapses>=1 || (p.correct+p.wrong>=2 && p.wrong/(p.correct+p.wrong)>=0.4);
+function recentWeak(dim){
+ const r=(dim.recent||[]).slice(-5);
+ if(!r.length)return false;
+ const wrong=r.filter(x=>x===0).length;
+ return wrong>=2 || (dim.streak===0 && dim.wrong>0) || wrong/r.length>=0.4;
 }
-function dueErrors(){
-  return db.errors.filter(e => !e.progress.nextReview || e.progress.nextReview <= now());
+function vocabWeakCount(v){const p=ensureVocabProgress(v.id);return relevantDims(v).filter(k=>recentWeak(p.dims[k])).length}
+function isDueDim(d){return d.nextReview!=null && d.nextReview<=now()}
+function dueVocabTasksCount(){
+ let n=0;activeVocab().forEach(v=>{const p=ensureVocabProgress(v.id);if(!p.learned)return;relevantDims(v).forEach(k=>{if(isDueDim(p.dims[k]))n++})});return n
 }
-function fmtDate(ts){
-  if(!ts) return "未安排";
-  const d=new Date(ts);
-  return d.toLocaleString("zh-CN",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});
-}
-function escapeHtml(s){
-  return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-}
+function dueErrorCount(){return activeErrors().filter(e=>ensureErrorProgress(e.id).nextReview<=now()).length}
 
-function goTab(tab){
-  document.querySelectorAll(".view").forEach(x=>x.classList.add("hidden"));
-  document.getElementById(tab).classList.remove("hidden");
-  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===tab));
-  renderAll();
+function goTab(id){
+ document.querySelectorAll(".view").forEach(x=>x.classList.add("hidden"));
+ document.getElementById(id).classList.remove("hidden");
+ document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===id));
+ renderAll();
 }
-document.querySelectorAll(".tab").forEach(btn=>btn.onclick=()=>goTab(btn.dataset.tab));
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>goTab(b.dataset.tab));
 
 function renderHome(){
-  const due=db.vocabulary.filter(v=>isDue(v.progress)).length;
-  const weak=db.vocabulary.filter(isWeak).length;
-  const dueE=dueErrors().length;
-  const learned=db.vocabulary.filter(v=>v.progress.learned).length;
-  statDueVocab.textContent=due; statWeak.textContent=weak; statDueErrors.textContent=dueE; statLearned.textContent=learned;
-  const fresh=db.vocabulary.filter(v=>!v.progress.learned).length;
-  homeVocabHint.textContent = fresh
-    ? `还有 ${fresh} 个新词未首次学习；${due} 个复习到期。`
-    : `新词已完成首次学习；${due} 个复习到期。`;
-  homeErrorHint.textContent=`当前有 ${dueE} 道错题到期。`;
+ const av=activeVocab(), ae=activeErrors();
+ const learned=av.filter(v=>ensureVocabProgress(v.id).learned).length;
+ const fresh=av.length-learned;
+ document.getElementById("statDueVocab").textContent=dueVocabTasksCount();
+ document.getElementById("statWeak").textContent=av.reduce((s,v)=>s+vocabWeakCount(v),0);
+ document.getElementById("statDueErrors").textContent=dueErrorCount();
+ document.getElementById("statLearned").textContent=learned;
+ document.getElementById("homeVocabHint").textContent=`${fresh} 个新词未首次学习；${dueVocabTasksCount()} 个测试维度到期。`;
+ document.getElementById("homeErrorHint").textContent=`${dueErrorCount()} 道错题到期；错题总数 ${ae.length}。`;
 }
 
-function filteredVocab(){
-  const f=document.getElementById("vocabFilter")?.value || "all";
-  return db.vocabulary.filter(v=>{
-    if(f==="all") return true;
-    if(f==="new") return !v.progress.learned;
-    if(f==="due") return isDue(v.progress);
-    if(f==="weak") return isWeak(v);
-    if(f==="A"||f==="R") return v.level===f;
-    if(f==="G") return !!v.g;
-    return true;
-  });
+function studyFiltered(){
+ const av=activeVocab();
+ const f=document.getElementById("vocabFilter")?.value||"all";
+ const q=normalize(document.getElementById("vocabSearch")?.value||"");
+ return av.filter(v=>{
+   if(q&&!normalize([v.word,v.plain,v.meaning,v.source].join(" ")).includes(q))return false;
+   const p=ensureVocabProgress(v.id);
+   if(f==="new")return!p.learned;
+   if(f==="due")return p.learned&&relevantDims(v).some(k=>isDueDim(p.dims[k]));
+   if(f==="weak")return vocabWeakCount(v)>0;
+   if(f==="A"||f==="R")return v.level===f;
+   if(f==="G")return !!v.g;
+   if(f==="archived")return false;
+   return true;
+ })
 }
-
 function renderStudy(){
-  currentStudyList=filteredVocab();
-  if(studyIndex>=currentStudyList.length) studyIndex=0;
-  const v=currentStudyList[studyIndex];
-  vocabCount.textContent=`${currentStudyList.length} / ${db.vocabulary.length} 词`;
-  if(!v){
-    studyWord.textContent="这里还没有词";
-    studyMeta.textContent="";
-    studyBadges.innerHTML="";
-    studyAnswer.innerHTML="";
-    flipBtn.classList.add("hidden"); learnedBtn.classList.add("hidden");
-    return;
-  }
-  flipBtn.classList.remove("hidden");
-  studyWord.textContent=v.word;
-  studyMeta.textContent=[v.pos,v.source].filter(Boolean).join(" · ");
-  studyBadges.innerHTML=`<span class="badge ${v.level.toLowerCase()}">${v.level==="A"?"A 主动":"R 识别"}</span>`+
-    (v.g?`<span class="badge g">G 格支配</span>`:"")+
-    (isWeak(v)?`<span class="badge">薄弱</span>`:"");
-  const aspect = v.aspect ? `${v.aspect.impf||"—"} / ${v.aspect.pf||"—"}` : "";
-  const gov=(v.government||[]).map(g=>`${escapeHtml(g.pattern)} <span class="small">(${escapeHtml(g.case_cn||g.case||"")})</span>`).join("<br>");
-  const usage=(v.usage||[]).map(escapeHtml).join("；");
-  studyAnswer.innerHTML=`
-    <div class="detail-row"><div class="detail-label">核心义</div>${escapeHtml(v.meaning)}</div>
-    ${aspect?`<div class="detail-row"><div class="detail-label">体对</div>${escapeHtml(aspect)}</div>`:""}
-    ${gov?`<div class="detail-row"><div class="detail-label">格支配 / 结构</div>${gov}</div>`:""}
-    ${usage?`<div class="detail-row"><div class="detail-label">基本用法</div>${usage}</div>`:""}
-    ${v.example?`<div class="detail-row"><div class="detail-label">例句</div>${escapeHtml(v.example)}</div>`:""}
-    ${v.sense_question?`<div class="detail-row"><div class="detail-label">词义辨析</div>${escapeHtml(v.sense_question.prompt)}</div>`:""}
-    <div class="detail-row"><div class="detail-label">复习状态</div>
-      ${v.progress.learned ? `第 ${v.progress.stage+1} 阶段 · 下次 ${fmtDate(v.progress.nextReview)}` : "尚未完成首次学习"}
-    </div>`;
-  studyAnswer.classList.add("hidden");
-  learnedBtn.classList.toggle("hidden",v.progress.learned);
-  flipBtn.textContent="翻转";
+ studyList=activeVocab();
+ if(studyIndex>=studyList.length)studyIndex=Math.max(0,studyList.length-1);
+ const v=studyList[studyIndex];
+ document.getElementById("studyCounter").textContent=v?`${studyIndex+1} / ${studyList.length}`:"0 / 0";
+ if(!v){
+   studyWord.textContent="没有可学习的词";studyMeta.textContent="";studyBadges.innerHTML="";studyAnswer.innerHTML="";
+   flipBtn.disabled=true;learnedBtn.classList.add("hidden");return;
+ }
+ flipBtn.disabled=false;studyFlipped=false;
+ const p=ensureVocabProgress(v.id);
+ studyWord.textContent=v.word;
+ studyMeta.textContent=[v.pos,v.source].filter(Boolean).join(" · ");
+ studyBadges.innerHTML=`<span class="badge ${v.level.toLowerCase()}">${v.level==="A"?"A 主动":"R 识别"}</span>${v.g?'<span class="badge g">G 格支配</span>':""}${vocabWeakCount(v)?'<span class="badge">薄弱</span>':""}${p.needsReconfirm?'<span class="badge">内容已修订</span>':""}`;
+ const aspect=v.aspect?`${v.aspect.impf||"—"} / ${v.aspect.pf||"—"}`:"";
+ const gov=(v.government||[]).map(g=>`${esc(g.pattern)} <span class="small">(${esc(g.case_cn||g.case||"")})</span>`).join("<br>");
+ studyAnswer.innerHTML=`
+ <div><div class="detail-label">核心义</div>${esc(v.meaning)}</div>
+ ${aspect?`<div><div class="detail-label">未完成体 / 完成体</div>${esc(aspect)}</div>`:""}
+ ${gov?`<div><div class="detail-label">格支配</div>${gov}</div>`:""}
+ ${(v.usage||[]).length?`<div><div class="detail-label">基本用法</div>${v.usage.map(esc).join("；")}</div>`:""}
+ ${v.example?`<div><div class="detail-label">例句</div>${esc(v.example)}</div>`:""}
+ ${v.sense_question?`<div><div class="detail-label">词义辨析</div>${esc(v.sense_question.prompt)}</div>`:""}`;
+ studyAnswer.classList.add("hidden");flipBtn.textContent="翻转";
+ learnedBtn.classList.add("hidden");
 }
 function flipStudy(){
-  const hidden=studyAnswer.classList.toggle("hidden");
-  flipBtn.textContent=hidden?"翻转":"收起";
+ if(!studyList.length)return;
+ studyFlipped=!studyFlipped;studyAnswer.classList.toggle("hidden",!studyFlipped);flipBtn.textContent=studyFlipped?"收起":"翻转";
+ const v=studyList[studyIndex],p=ensureVocabProgress(v.id);
+ learnedBtn.classList.toggle("hidden",p.learned||!studyFlipped);
 }
 function markLearned(){
-  const v=currentStudyList[studyIndex];
-  if(!v) return;
-  v.progress.learned=true;
-  v.progress.stage=0;
-  v.progress.nextReview=now()+REVIEW_INTERVALS[0];
-  saveDB();
-  renderStudy();
+ const v=studyList[studyIndex];if(!v||!studyFlipped)return;
+ const p=ensureVocabProgress(v.id);p.learned=true;p.learnedAt=p.learnedAt||now();p.needsReconfirm=false;
+ relevantDims(v).forEach(k=>{const d=p.dims[k];if(d.nextReview==null)d.nextReview=now()+REVIEW_INTERVALS[0]});
+ saveProgress();renderAll();renderStudy();
 }
-function nextStudy(){ if(currentStudyList.length){studyIndex=(studyIndex+1)%currentStudyList.length;renderStudy();}}
-function prevStudy(){ if(currentStudyList.length){studyIndex=(studyIndex-1+currentStudyList.length)%currentStudyList.length;renderStudy();}}
-document.getElementById("vocabFilter").onchange=()=>{studyIndex=0;renderStudy();renderVocabList();};
-
-function showVocabMode(mode){
-  studyMode.classList.toggle("hidden",mode!=="study");
-  testMode.classList.toggle("hidden",mode!=="test");
-  if(mode==="study") renderStudy();
+function nextStudy(){if(studyList.length){studyIndex=(studyIndex+1)%studyList.length;renderStudy()}}
+function prevStudy(){if(studyList.length){studyIndex=(studyIndex-1+studyList.length)%studyList.length;renderStudy()}}
+function showVocabMode(m){
+ studyMode.classList.toggle("hidden",m!=="study");testMode.classList.toggle("hidden",m!=="test");
+ studyModeBtn.classList.toggle("active",m==="study");testModeBtn.classList.toggle("active",m==="test");
+ if(m==="study")renderStudy();
 }
 
-function governmentAliases(g){
-  const c=normalize(g.case||"");
-  const n=String(g.case_no||"");
-  const cn=normalize(g.case_cn||"");
-  const map={
-    "родительный":["родительный","родительный падеж","р.п","рп","2","2格","二格","чего","кого"],
-    "дательный":["дательный","дательный падеж","д.п","дп","3","3格","三格","чему","кому"],
-    "винительный":["винительный","винительный падеж","в.п","вп","4","4格","四格","что","кого"],
-    "творительный":["творительный","творительный падеж","т.п","тп","5","5格","五格","чем","кем"],
-    "предложный":["предложный","предложный падеж","п.п","пп","6","6格","六格","о чем","о ком","чем","ком"],
-    "именительный":["именительный","именительный падеж","и.п","ип","1","1格","一格","что","кто"]
-  };
-  return Array.from(new Set([c,n,cn,...(map[c]||[])].map(normalize).filter(Boolean)));
+function acceptedActive(v){
+ const vals=new Set((v.accepted_active_answers||[]).map(normalize).filter(Boolean));
+ if(v.plain)vals.add(normalize(v.plain));
+ if(v.word)vals.add(normalize(v.word));
+ if(v.aspect){if(v.aspect.impf)vals.add(normalize(v.aspect.impf));if(v.aspect.pf)vals.add(normalize(v.aspect.pf))}
+ return [...vals];
 }
-function govIsCorrect(input,g){
-  const x=normalize(input);
-  if(governmentAliases(g).includes(x)) return true;
-  // If learner typed the case-question pair, accept either half or the full pair.
-  const pattern=normalize(g.pattern||"");
-  const qs=(pattern.match(/(кого|чего|кому|чему|кого|что|кем|чем|ком)/g)||[]);
-  return qs.some(q=>x===q);
+function acceptedMeanings(v){
+ return [...new Set([v.meaning,...(v.accepted_meanings||[])].map(normalize).filter(Boolean))]
 }
-
 function buildTestQueue(){
-  const due=db.vocabulary.filter(v=>isDue(v.progress));
-  const pool=due.length?due:db.vocabulary.filter(v=>v.progress.learned);
-  const tasks=[];
-  pool.forEach(v=>{
-    if(v.level==="R"){
-      tasks.push({vocabId:v.id,type:"R_ZH"});
-    }else{
-      tasks.push({vocabId:v.id,type:"A_RU"});
-      tasks.push({vocabId:v.id,type:"R_ZH"});
-    }
-    if(v.g && (v.government||[]).length){
-      v.government.forEach((g,i)=>tasks.push({vocabId:v.id,type:"G",govIndex:i}));
-    }
-    if(v.sense_question) tasks.push({vocabId:v.id,type:"SENSE"});
-  });
-  // weak items appear one extra time in the same session
-  pool.filter(isWeak).forEach(v=>{
-    tasks.push({vocabId:v.id,type:v.level==="A"?"A_RU":"R_ZH"});
-    if(v.g && (v.government||[]).length) tasks.push({vocabId:v.id,type:"G",govIndex:0});
-  });
-  return tasks.sort(()=>Math.random()-.5);
+ const tasks=[];
+ activeVocab().forEach(v=>{
+   const p=ensureVocabProgress(v.id);if(!p.learned)return;
+   const add=(type,extra={})=>{const d=p.dims[dimForTask(type)];if(isDueDim(d)||p.needsReconfirm)tasks.push({vocabId:v.id,type,...extra})};
+   add("R_ZH");if(v.level==="A")add("A_RU");
+   if(v.g)(v.government||[]).forEach((g,i)=>add("G",{govIndex:i}));
+   if(v.sense_question)add("SENSE");
+ });
+ const due=tasks.length?tasks:activeVocab().filter(v=>ensureVocabProgress(v.id).learned).flatMap(v=>{
+   const a=[{vocabId:v.id,type:"R_ZH"}];if(v.level==="A")a.push({vocabId:v.id,type:"A_RU"});if(v.g&&(v.government||[]).length)a.push({vocabId:v.id,type:"G",govIndex:0});if(v.sense_question)a.push({vocabId:v.id,type:"SENSE"});return a
+ });
+ return due.sort(()=>Math.random()-.5)
 }
 function startTest(){
-  testQueue=buildTestQueue();
-  if(!testQueue.length){
-    testQuestion.textContent="还没有可测试的词。先完成首次学习，或等复习到期。";
-    return;
-  }
-  startTestBtn.classList.add("hidden");
-  nextTestBtn.classList.add("hidden");
-  loadNextTest();
+ testQueue=buildTestQueue();startTestBtn.classList.add("hidden");nextTestBtn.classList.add("hidden");
+ if(!testQueue.length){testQuestion.textContent="还没有可测试内容。";startTestBtn.classList.remove("hidden");return}
+ loadNextTest();
 }
 function loadNextTest(){
-  testFeedback.innerHTML="";
-  testOptions.innerHTML=""; testOptions.classList.add("hidden");
-  testInput.classList.remove("hidden"); testInput.value=""; testInput.disabled=false;
-  currentTest=testQueue.shift();
-  if(!currentTest){
-    testType.textContent="";
-    testQuestion.textContent="🎉 本轮测试完成";
-    testInput.classList.add("hidden");
-    startTestBtn.classList.remove("hidden");
-    startTestBtn.textContent="再来一轮";
-    saveDB();
-    return;
-  }
-  const v=db.vocabulary.find(x=>x.id===currentTest.vocabId);
-  if(currentTest.type==="R_ZH"){
-    testType.textContent="R · 俄 → 中";
-    testQuestion.textContent=v.word;
-    testInput.placeholder="输入中文核心义";
-  }else if(currentTest.type==="A_RU"){
-    testType.textContent="A · 中 → 俄";
-    testQuestion.textContent=v.meaning;
-    testInput.placeholder="输入俄语词";
-  }else if(currentTest.type==="G"){
-    const g=v.government[currentTest.govIndex];
-    testType.textContent="G · 格支配";
-    testQuestion.textContent=`${v.word}：${g.pattern} —— 这里要求第几格？`;
-    testInput.placeholder="可答：чего / 2格 / 二格 / родительный";
-  }else if(currentTest.type==="SENSE"){
-    testType.textContent="词义辨析";
-    testQuestion.textContent=v.sense_question.prompt;
-    testInput.classList.add("hidden");
-    testOptions.classList.remove("hidden");
-    v.sense_question.options.forEach(opt=>{
-      const b=document.createElement("button"); b.className="option"; b.textContent=opt;
-      b.onclick=()=>checkTest(opt); testOptions.appendChild(b);
-    });
-  }
-  setTimeout(()=>{ if(!testInput.classList.contains("hidden")) testInput.focus(); },50);
+ testFeedback.innerHTML="";testOptions.innerHTML="";testOptions.classList.add("hidden");testInput.classList.remove("hidden");testInput.disabled=false;testInput.value="";
+ currentTest=testQueue.shift();
+ if(!currentTest){testType.textContent="";testQuestion.textContent="🎉 本轮测试完成";testInput.classList.add("hidden");startTestBtn.classList.remove("hidden");startTestBtn.textContent="再来一轮";renderAll();return}
+ const v=content.vocabulary.find(x=>x.id===currentTest.vocabId);
+ if(currentTest.type==="R_ZH"){testType.textContent="R · 俄 → 中";testQuestion.textContent=v.word;testInput.placeholder="输入中文核心义"}
+ if(currentTest.type==="A_RU"){testType.textContent="A · 中 → 俄";testQuestion.textContent=v.meaning;testInput.placeholder="未完成体或完成体均可；不要求输入重音"}
+ if(currentTest.type==="G"){const g=v.government[currentTest.govIndex];testType.textContent="G · 格支配";testQuestion.textContent=`${v.word}：${g.pattern} —— 要求第几格？`;testInput.placeholder="可答：чего / 2格 / 二格 / родительный"}
+ if(currentTest.type==="SENSE"){testType.textContent="词义辨析";testQuestion.textContent=v.sense_question.prompt;testInput.classList.add("hidden");testOptions.classList.remove("hidden");v.sense_question.options.forEach(o=>{const b=document.createElement("button");b.className="option";b.textContent=o;b.onclick=()=>checkTest(o);testOptions.appendChild(b)})}
+ setTimeout(()=>{if(!testInput.classList.contains("hidden"))testInput.focus()},30);
 }
-testInput.addEventListener("keydown",e=>{if(e.key==="Enter" && !testInput.disabled) checkTest(testInput.value);});
-
+testInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!testInput.disabled)checkTest(testInput.value)});
+function matchesAny(raw,arr){
+ const x=normalize(raw);return arr.some(a=>{const y=normalize(a);return x===y || (/[一-龥]/.test(x)&&x.length>0&&(y.includes(x)||x.includes(y)))})
+}
 function checkTest(raw){
-  if(!currentTest) return;
-  const v=db.vocabulary.find(x=>x.id===currentTest.vocabId);
-  let correct=false, answer="";
-  if(currentTest.type==="R_ZH"){
-    const expected=normalize(v.meaning);
-    const input=normalize(raw);
-    // Prototype: recognize major chunks rather than exact punctuation.
-    const keys=expected.split(/[；;，,、]/).map(normalize).filter(Boolean);
-    correct=keys.some(k=>input.includes(k) || k.includes(input)) && input.length>0;
-    answer=v.meaning;
-  }else if(currentTest.type==="A_RU"){
-    correct=normalize(raw)===normalize(v.plain||v.word);
-    answer=v.word;
-  }else if(currentTest.type==="G"){
-    const g=v.government[currentTest.govIndex];
-    correct=govIsCorrect(raw,g);
-    answer=`${g.case_cn||""} / ${g.case||""}`;
-  }else if(currentTest.type==="SENSE"){
-    correct=normalize(raw)===normalize(v.sense_question.answer);
-    answer=v.sense_question.answer;
-  }
-  recordVocabResult(v,correct,currentTest.type);
-  testInput.disabled=true;
-  [...testOptions.children].forEach(b=>b.disabled=true);
-  testFeedback.innerHTML=`<div class="feedback ${correct?"good":"bad"}">
-    ${correct?"✅ 正确":"❌ 这次不对"}<br>
-    <span class="small">答案：${escapeHtml(answer)}</span>
-  </div>`;
-  if(!correct){
-    // reinsert after several cards to force near-term retrieval, but avoid an endless loop
-    const retry={...currentTest,retry:true};
-    testQueue.splice(Math.min(3,testQueue.length),0,retry);
-  }
-  nextTestBtn.classList.remove("hidden");
-  saveDB();
+ const v=content.vocabulary.find(x=>x.id===currentTest.vocabId);let ok=false,ans="";
+ if(currentTest.type==="R_ZH"){ok=matchesAny(raw,acceptedMeanings(v));ans=v.meaning}
+ if(currentTest.type==="A_RU"){ok=acceptedActive(v).includes(normalize(raw));ans=acceptedActive(v).join(" / ")}
+ if(currentTest.type==="G"){const g=v.government[currentTest.govIndex];ok=matchesAny(raw,g.accepted_answers||[]);ans=(g.accepted_answers||[]).slice(0,4).join(" / ")}
+ if(currentTest.type==="SENSE"){ok=normalize(raw)===normalize(v.sense_question.answer);ans=v.sense_question.answer}
+ recordVocab(v,currentTest.type,ok);
+ testInput.disabled=true;[...testOptions.children].forEach(x=>x.disabled=true);
+ testFeedback.innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"✅ 正确":"❌ 这次不对"}<br><span class="small">可接受答案：${esc(ans)}</span></div>`;
+ if(!ok&&!currentTest.retry)testQueue.splice(Math.min(3,testQueue.length),0,{...currentTest,retry:true});
+ nextTestBtn.classList.remove("hidden");saveProgress();renderAll();
 }
-function nextTest(){ nextTestBtn.classList.add("hidden"); loadNextTest(); }
+function recordVocab(v,type,ok){
+ const p=ensureVocabProgress(v.id),d=p.dims[dimForTask(type)];
+ d.recent=(d.recent||[]).slice(-9);d.recent.push(ok?1:0);
+ if(ok){d.correct++;d.streak++;d.stage=Math.min(d.stage+1,REVIEW_INTERVALS.length-1);const factor=recentWeak(d)?.55:1;d.nextReview=now()+Math.max(REVIEW_INTERVALS[0],Math.round(REVIEW_INTERVALS[d.stage]*factor))}
+ else{d.wrong++;d.streak=0;d.stage=Math.max(0,d.stage-2);d.nextReview=now()+REVIEW_INTERVALS[0]}
+ p.needsReconfirm=false;
+}
+function nextTest(){nextTestBtn.classList.add("hidden");loadNextTest()}
 
-function recordVocabResult(v,correct,type){
-  const p=v.progress;
-  p.lastResult=correct?"correct":"wrong"; p.lastTestType=type;
-  if(correct){
-    p.correct++;
-    p.stage=Math.min(p.stage+1,REVIEW_INTERVALS.length-1);
-    const base=REVIEW_INTERVALS[p.stage];
-    // weak words advance more cautiously until their recent error burden falls
-    const weakFactor=isWeak(v)?0.55:1;
-    p.nextReview=now()+Math.max(REVIEW_INTERVALS[0],Math.round(base*weakFactor));
-  }else{
-    p.wrong++; p.lapses++;
-    p.stage=Math.max(0,p.stage-2);
-    p.nextReview=now()+REVIEW_INTERVALS[0];
-  }
-}
-
-function renderVocabList(){
-  const list=filteredVocab();
-  vocabList.innerHTML=list.map(v=>{
-    const p=v.progress;
-    return `<div class="item">
-      <div class="item-top">
-        <div>
-          <div class="item-title">${escapeHtml(v.word)}</div>
-          <div class="item-meta">${escapeHtml(v.meaning)} · ${v.level}${v.g?"/G":""}</div>
-        </div>
-        <div class="small">${p.learned?`阶段 ${p.stage+1}`:"未学"}</div>
-      </div>
-      <div class="item-meta">
-        ${p.learned?`下次：${fmtDate(p.nextReview)} · 对 ${p.correct} / 错 ${p.wrong}`:"等待首次学习"}
-        ${isWeak(v)?" · ⚠️ 薄弱":""}
-      </div>
-    </div>`;
-  }).join("") || `<div class="small">当前筛选条件下没有词。</div>`;
-}
-
-function errorStatus(e){
-  if(e.progress.status==="mastered") return "已掌握";
-  if(!e.progress.nextReview || e.progress.nextReview<=now()) return "待复习";
-  return "巩固中";
-}
-function renderErrorList(){
-  const f=errorFilter?.value||"all";
-  const arr=db.errors.filter(e=>{
-    if(f==="all")return true;
-    if(f==="due")return !e.progress.nextReview || e.progress.nextReview<=now();
-    if(f==="learning")return e.progress.status==="learning";
-    if(f==="mastered")return e.progress.status==="mastered";
-  });
-  errorList.innerHTML=arr.map(e=>`<div class="item">
-    <div class="item-title">${escapeHtml(e.prompt)}</div>
-    <div class="item-meta">当时答案：${escapeHtml(e.student_answer)} → 正确：${escapeHtml(e.correct_answer)}</div>
-    <div class="item-meta">${escapeHtml((e.tags||[]).join(" / "))} · ${escapeHtml(e.source||"")}</div>
-    <div class="item-meta">${errorStatus(e)} · 下次：${fmtDate(e.progress.nextReview)}</div>
-  </div>`).join("") || `<div class="small">没有符合条件的错题。</div>`;
-}
-
+function errorStatus(e){const p=ensureErrorProgress(e.id);if(p.status==="mastered")return"已掌握";if(p.nextReview<=now())return"待复习";return"巩固中"}
 function startErrorReview(){
-  goTab("errors");
-  errorQueue=dueErrors();
-  if(!errorQueue.length){
-    errorReview.classList.remove("hidden");
-    errorQuestion.textContent="🎉 当前没有到期错题";
-    errorInput.classList.add("hidden"); checkErrorBtn.classList.add("hidden"); nextErrorBtn.classList.add("hidden");
-    return;
-  }
-  errorReview.classList.remove("hidden"); errorInput.classList.remove("hidden"); checkErrorBtn.classList.remove("hidden");
-  loadError();
+ goTab("errors");errorQueue=activeErrors().filter(e=>ensureErrorProgress(e.id).nextReview<=now()||ensureErrorProgress(e.id).needsReconfirm);
+ errorReview.classList.remove("hidden");
+ if(!errorQueue.length){errorQuestion.textContent="🎉 当前没有到期错题";errorMeta.textContent="";errorInput.classList.add("hidden");checkErrorBtn.classList.add("hidden");nextErrorBtn.classList.add("hidden");return}
+ errorInput.classList.remove("hidden");checkErrorBtn.classList.remove("hidden");loadError();
 }
 function loadError(){
-  errorFeedback.innerHTML=""; nextErrorBtn.classList.add("hidden"); checkErrorBtn.classList.remove("hidden");
-  errorInput.value=""; errorInput.disabled=false; errorInput.classList.remove("hidden");
-  currentError=errorQueue.shift();
-  if(!currentError){
-    errorQuestion.textContent="🎉 本轮错题复习完成";
-    errorMeta.textContent=""; errorInput.classList.add("hidden"); checkErrorBtn.classList.add("hidden");
-    saveDB();return;
-  }
-  errorQuestion.textContent=currentError.prompt;
-  errorMeta.textContent=`${(currentError.tags||[]).join(" / ")} · ${currentError.source||""}`;
-  errorInput.focus();
+ errorFeedback.innerHTML="";nextErrorBtn.classList.add("hidden");checkErrorBtn.classList.remove("hidden");errorInput.disabled=false;errorInput.value="";errorInput.classList.remove("hidden");
+ currentError=errorQueue.shift();
+ if(!currentError){errorQuestion.textContent="🎉 本轮错题复习完成";errorMeta.textContent="";errorInput.classList.add("hidden");checkErrorBtn.classList.add("hidden");saveProgress();renderAll();return}
+ errorQuestion.textContent=currentError.prompt;errorMeta.textContent=`${(currentError.tags||[]).join(" / ")} · ${currentError.source||""}`;errorInput.focus();
 }
-errorInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!errorInput.disabled)checkError();});
+errorInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!errorInput.disabled)checkError()});
 function checkError(){
-  if(!currentError)return;
-  const raw=errorInput.value;
-  const ok=normalize(raw)===normalize(currentError.correct_answer);
-  const p=currentError.progress;
-  if(ok){
-    p.correct++; p.stage=Math.min(p.stage+1,ERROR_INTERVALS.length-1);
-    p.nextReview=now()+ERROR_INTERVALS[p.stage];
-    p.status=p.stage>=3?"mastered":"learning";
-  }else{
-    p.wrong++; p.stage=0; p.nextReview=now()+10*60*1000; p.status="due";
-    errorQueue.splice(Math.min(2,errorQueue.length),0,currentError);
-  }
-  errorInput.disabled=true;
-  errorFeedback.innerHTML=`<div class="feedback ${ok?"good":"bad"}">
-    ${ok?"✅ 正确":"❌ 这次不对"}<br>
-    <b>正确答案：</b>${escapeHtml(currentError.correct_answer)}<br>
-    <b>你当时写：</b>${escapeHtml(currentError.student_answer)}<br>
-    <span class="small">${escapeHtml(currentError.explanation)}</span>
-  </div>`;
-  checkErrorBtn.classList.add("hidden"); nextErrorBtn.classList.remove("hidden");
-  saveDB();
+ const e=currentError,p=ensureErrorProgress(e.id),ok=matchesAny(errorInput.value,[e.correct_answer,...(e.accepted_answers||[])]);
+ p.recent=(p.recent||[]).slice(-9);p.recent.push(ok?1:0);
+ if(ok){p.correct++;p.stage=Math.min(p.stage+1,ERROR_INTERVALS.length-1);p.nextReview=now()+ERROR_INTERVALS[p.stage];p.status=p.stage>=3?"mastered":"learning";p.needsReconfirm=false}
+ else{p.wrong++;p.stage=0;p.nextReview=now()+10*60e3;p.status="due";if(!e._retry){e._retry=true;errorQueue.splice(Math.min(2,errorQueue.length),0,e)}}
+ errorInput.disabled=true;errorFeedback.innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"✅ 正确":"❌ 这次不对"}<br><b>正确答案：</b>${esc(e.correct_answer)}<br><b>当时答案：</b>${esc(e.student_answer)}<br><span class="small">${esc(e.explanation)}</span></div>`;
+ checkErrorBtn.classList.add("hidden");nextErrorBtn.classList.remove("hidden");saveProgress();renderAll();
 }
-function nextError(){loadError();}
+function nextError(){loadError()}
 
-function renderAll(){
-  renderHome(); renderStudy(); renderVocabList(); renderErrorList();
+function toggleLibrary(which){
+ const body=document.getElementById(which==="vocab"?"vocabLibrary":"errorLibrary");
+ const lab=document.getElementById(which==="vocab"?"vocabToggleLabel":"errorToggleLabel");
+ const show=body.classList.contains("hidden");body.classList.toggle("hidden",!show);lab.textContent=show?"收起":"展开";
+ if(show){which==="vocab"?renderVocabLibrary():renderErrorLibrary()}
 }
+function renderVocabLibrary(){
+ const f=vocabFilter.value,q=normalize(vocabSearch.value);
+ let arr=content.vocabulary.filter(v=>{
+   const p=ensureVocabProgress(v.id),active=v.active!==false;
+   if(f==="archived")return !active;
+   if(!active)return false;
+   if(q&&!normalize([v.word,v.plain,v.meaning,v.source].join(" ")).includes(q))return false;
+   if(f==="new")return!p.learned;if(f==="due")return p.learned&&relevantDims(v).some(k=>isDueDim(p.dims[k]));if(f==="weak")return vocabWeakCount(v)>0;
+   if(f==="A"||f==="R")return v.level===f;if(f==="G")return!!v.g;return true;
+ });
+ const max=Math.max(0,arr.length-1);vocabSlider.max=max;
+ let start=Math.min(Number(vocabSlider.value)||0,max);vocabSlider.value=start;
+ vocabSliderLabel.textContent=arr.length?`${start+1} / ${arr.length}`:"0 / 0";
+ const shown=arr.slice(start,start+VISIBLE_BATCH);
+ vocabList.innerHTML=shown.map(v=>{const p=ensureVocabProgress(v.id);return`<div class="list-card"><div class="list-top"><div><div class="list-word">${esc(v.word)}</div><div class="item-meta">${esc(v.meaning)} · ${v.level}${v.g?"/G":""} · ${esc(v.source||"")}</div></div><div class="small">${v.active===false?"已归档":p.learned?"已学":"未学"}</div></div><div class="item-meta">${p.learned?`R:${p.dims.recognition.stage+1}${v.level==="A"?` · A:${p.dims.active.stage+1}`:""}${v.g?` · G:${p.dims.government.stage+1}`:""}`:"等待首次学习"}${vocabWeakCount(v)?` · ⚠️ ${vocabWeakCount(v)} 个薄弱维度`:""}</div></div>`}).join("")||'<div class="small">没有符合条件的词。</div>';
+ const av=activeVocab();vocabSummary.innerHTML=`<span class="chip">总词数 ${av.length}</span><span class="chip">A ${av.filter(v=>v.level==="A").length}</span><span class="chip">R ${av.filter(v=>v.level==="R").length}</span><span class="chip">G ${av.filter(v=>v.g).length}</span><span class="chip">未学 ${av.filter(v=>!ensureVocabProgress(v.id).learned).length}</span>`;
+ vocabTotalLabel.textContent=`${av.length} 个`;
+}
+function renderErrorLibrary(){
+ const f=errorFilter.value,tag=errorTagFilter.value,q=normalize(errorSearch.value);
+ let arr=content.errors.filter(e=>{
+   const p=ensureErrorProgress(e.id),active=e.active!==false;
+   if(f==="archived")return!active;if(!active)return false;
+   if(q&&!normalize([e.prompt,(e.tags||[]).join(" "),e.source].join(" ")).includes(q))return false;
+   if(tag!=="all"&&!(e.tags||[]).includes(tag))return false;
+   if(f==="due")return p.nextReview<=now();if(f==="learning")return p.status==="learning";if(f==="mastered")return p.status==="mastered";return true;
+ });
+ const max=Math.max(0,arr.length-1);errorSlider.max=max;let start=Math.min(Number(errorSlider.value)||0,max);errorSlider.value=start;errorSliderLabel.textContent=arr.length?`${start+1} / ${arr.length}`:"0 / 0";
+ errorList.innerHTML=arr.slice(start,start+VISIBLE_BATCH).map(e=>{const p=ensureErrorProgress(e.id);return`<div class="list-card"><div class="list-word">${esc(e.prompt)}</div><div class="item-meta">当时：${esc(e.student_answer)} → 正确：${esc(e.correct_answer)}</div><div class="item-meta">${esc((e.tags||[]).join(" / "))} · ${esc(e.source||"")} · ${e.active===false?"已归档":errorStatus(e)} · 下次 ${fmt(p.nextReview)}</div></div>`}).join("")||'<div class="small">没有符合条件的错题。</div>';
+ const ae=activeErrors(),tags=[...new Set(ae.flatMap(e=>e.tags||[]))].sort();
+ if(errorTagFilter.options.length!==tags.length+1){errorTagFilter.innerHTML='<option value="all">全部知识点</option>'+tags.map(t=>`<option>${esc(t)}</option>`).join("")}
+ errorSummary.innerHTML=`<span class="chip">总错题 ${ae.length}</span><span class="chip">待复习 ${ae.filter(e=>ensureErrorProgress(e.id).nextReview<=now()).length}</span><span class="chip">巩固中 ${ae.filter(e=>ensureErrorProgress(e.id).status==="learning").length}</span><span class="chip">已掌握 ${ae.filter(e=>ensureErrorProgress(e.id).status==="mastered").length}</span>`;
+ errorTotalLabel.textContent=`${ae.length} 道`;
+}
+["vocabSearch"].forEach(id=>document.getElementById(id).addEventListener("input",()=>{vocabSlider.value=0;renderVocabLibrary()}));
+vocabFilter.addEventListener("change",()=>{vocabSlider.value=0;renderVocabLibrary()});
+vocabSlider.addEventListener("input",renderVocabLibrary);
+["errorSearch"].forEach(id=>document.getElementById(id).addEventListener("input",()=>{errorSlider.value=0;renderErrorLibrary()}));
+errorFilter.addEventListener("change",()=>{errorSlider.value=0;renderErrorLibrary()});
+errorTagFilter.addEventListener("change",()=>{errorSlider.value=0;renderErrorLibrary()});
+errorSlider.addEventListener("input",renderErrorLibrary);
+
+function getBackups(){try{return JSON.parse(localStorage.getItem(STORAGE.backups))||[]}catch(e){return[]}}
+function autoBackup(){
+ const b=getBackups();b.unshift({time:now(),content:clone(content),progress:clone(progress)});localStorage.setItem(STORAGE.backups,JSON.stringify(b.slice(0,5)));
+}
+function majorVocabChange(old,nw){
+ const oldGov=JSON.stringify((old.government||[]).map(x=>[normalize(x.pattern),normalize(x.case),x.case_no]));
+ const newGov=JSON.stringify((nw.government||[]).map(x=>[normalize(x.pattern),normalize(x.case),x.case_no]));
+ const oldAsp=JSON.stringify(old.aspect||null),newAsp=JSON.stringify(nw.aspect||null);
+ return normalize(old.plain)!==normalize(nw.plain)||oldGov!==newGov||oldAsp!==newAsp;
+}
+function majorErrorChange(old,nw){
+ return normalize(old.correct_answer)!==normalize(nw.correct_answer)||JSON.stringify((old.accepted_answers||[]).map(normalize).sort())!==JSON.stringify((nw.accepted_answers||[]).map(normalize).sort());
+}
+function inspectImport(pack){
+ const byV=new Map(content.vocabulary.map(x=>[x.id,x])),byE=new Map(content.errors.map(x=>[x.id,x]));
+ let stats={vNew:0,vUpdate:0,vSame:0,vMajor:0,eNew:0,eUpdate:0,eSame:0,eMajor:0};
+ (pack.vocabulary||[]).forEach(n=>{const o=byV.get(n.id);if(!o)stats.vNew++;else if(JSON.stringify(o)===JSON.stringify(n))stats.vSame++;else{stats.vUpdate++;if(majorVocabChange(o,n))stats.vMajor++}});
+ (pack.errors||[]).forEach(n=>{const o=byE.get(n.id);if(!o)stats.eNew++;else if(JSON.stringify(o)===JSON.stringify(n))stats.eSame++;else{stats.eUpdate++;if(majorErrorChange(o,n))stats.eMajor++}});
+ return stats;
+}
+function applyImport(pack){
+ autoBackup();
+ const byV=new Map(content.vocabulary.map(x=>[x.id,x])),byE=new Map(content.errors.map(x=>[x.id,x]));
+ (pack.vocabulary||[]).forEach(n=>{
+   const o=byV.get(n.id);
+   if(!o){content.vocabulary.push(n);ensureVocabProgress(n.id)}
+   else{const major=majorVocabChange(o,n);Object.keys(o).forEach(k=>delete o[k]);Object.assign(o,n);if(major)ensureVocabProgress(n.id).needsReconfirm=true}
+ });
+ (pack.errors||[]).forEach(n=>{
+   const o=byE.get(n.id);
+   if(!o){content.errors.push(n);ensureErrorProgress(n.id)}
+   else{const major=majorErrorChange(o,n);Object.keys(o).forEach(k=>delete o[k]);Object.assign(o,n);if(major)ensureErrorProgress(n.id).needsReconfirm=true}
+ });
+ content.batch=pack.batch||content.batch;saveAll();
+}
+function showModal(html){modal.innerHTML=html;modalMask.classList.remove("hidden")}
+function hideModal(){modalMask.classList.add("hidden")}
+modalMask.addEventListener("click",e=>{if(e.target===modalMask)hideModal()});
 
 importBtn.onclick=()=>fileInput.click();
-fileInput.onchange=async(e)=>{
-  const file=e.target.files[0]; if(!file)return;
-  try{
-    const incoming=JSON.parse(await file.text());
-    const merged=mergePack(db,incoming);
-    db=initProgress(merged); saveDB();
-    alert("导入成功。重复词会按 plain/word 合并，已有学习进度会保留。");
-  }catch(err){alert("导入失败："+err.message);}
-  e.target.value="";
-};
-function mergePack(oldDb,incoming){
-  const result=deepClone(oldDb);
-  const existingByPlain=new Map(result.vocabulary.map(v=>[normalize(v.plain||v.word),v]));
-  (incoming.vocabulary||[]).forEach(nv=>{
-    const key=normalize(nv.plain||nv.word);
-    if(existingByPlain.has(key)){
-      const old=existingByPlain.get(key);
-      const progress=old.progress;
-      Object.assign(old,nv,{progress});
-      // merge sources when possible
-      if(old.source && nv.source && !String(old.source).includes(nv.source)) old.source=`${old.source} / ${nv.source}`;
-    }else result.vocabulary.push(nv);
-  });
-  const existingErrors=new Set(result.errors.map(e=>e.id));
-  (incoming.errors||[]).forEach(ne=>{if(!existingErrors.has(ne.id))result.errors.push(ne);});
-  result.batch=incoming.batch||result.batch;
-  return result;
+fileInput.onchange=async e=>{
+ const f=e.target.files[0];if(!f)return;
+ try{
+  const pack=JSON.parse(await f.text());
+  const s=inspectImport(pack);
+  window._pendingPack=pack;
+  showModal(`<h3>导入预览</h3>
+   <div class="modal-grid">
+    <div class="modal-stat"><b>新词</b><br>${s.vNew}</div><div class="modal-stat"><b>更新词条</b><br>${s.vUpdate}</div>
+    <div class="modal-stat"><b>词条无变化</b><br>${s.vSame}</div><div class="modal-stat"><b>重大词条修订</b><br>${s.vMajor}</div>
+    <div class="modal-stat"><b>新错题</b><br>${s.eNew}</div><div class="modal-stat"><b>更新错题</b><br>${s.eUpdate}</div>
+    <div class="modal-stat"><b>错题无变化</b><br>${s.eSame}</div><div class="modal-stat"><b>重大错题修订</b><br>${s.eMajor}</div>
+   </div>
+   <div class="notice" style="margin-top:12px">现有学习进度不会被覆盖。重大修订只会标记“需要重新确认”，历史成绩仍保留。确认导入前会自动备份。</div>
+   <div class="modal-actions"><button class="btn" onclick="hideModal()">取消</button><button class="btn primary" onclick="applyImport(window._pendingPack);hideModal()">确认导入</button></div>`);
+ }catch(err){showModal(`<h3>导入失败</h3><div class="notice">${esc(err.message)}</div><div class="modal-actions"><button class="btn" onclick="hideModal()">关闭</button></div>`)}
+ e.target.value="";
 }
-
 exportBtn.onclick=()=>{
-  const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download=`XUXU-A2-PROGRESS-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(a.href);
-};
-resetBtn.onclick=()=>{
-  if(confirm("确定重置为示例数据吗？当前浏览器里的学习进度会清空。")){
-    db=initProgress(deepClone(SAMPLE)); saveDB();
-  }
-};
+ const payload={schema_version:"2.0-export",exported_at:new Date().toISOString(),content,progress};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`XUXU-A2-FULL-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href)
+}
+backupBtn.onclick=()=>{
+ const b=getBackups();
+ showModal(`<h3>最近自动备份</h3>${b.length?b.map((x,i)=>`<div class="item" style="margin-top:8px"><b>${new Date(x.time).toLocaleString("zh-CN")}</b><div class="item-meta">备份 ${i+1} · ${x.content.vocabulary.length} 词 · ${x.content.errors.length} 错题</div><button class="btn" style="margin-top:8px" onclick="restoreBackup(${i})">恢复此备份</button></div>`).join(""):'<div class="small">还没有自动备份。第一次导入学习包前会自动建立。</div>'}<div class="modal-actions"><button class="btn" onclick="hideModal()">关闭</button></div>`);
+}
+function restoreBackup(i){const b=getBackups()[i];if(!b)return;content=clone(b.content);progress=clone(b.progress);saveAll();hideModal()}
+resetBtn.onclick=()=>{if(confirm("确定重置为示例数据吗？当前本地学习数据会清空。")){content=clone(SAMPLE_CONTENT);progress={vocab:{},errors:{}};saveAll()}}
 
+function renderAll(){
+ renderHome();renderStudy();
+ vocabTotalLabel.textContent=`${activeVocab().length} 个`;errorTotalLabel.textContent=`${activeErrors().length} 道`;
+ if(!vocabLibrary.classList.contains("hidden"))renderVocabLibrary();
+ if(!errorLibrary.classList.contains("hidden"))renderErrorLibrary();
+}
 renderAll();
 </script>
 </body>
