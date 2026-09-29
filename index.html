@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.1</title>
+<title>小许 A2 学习系统 v2.1.1</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -11,16 +11,33 @@
  --bad:#b53636;--bad-bg:#fff0f0;--warn:#9a6200;--warn-bg:#fff7df;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif}
+html{
+ scroll-behavior:auto;
+ height:auto;
+ min-height:100%;
+ overflow-x:hidden;
+ overflow-y:auto;
+}
+body{
+ margin:0;
+ min-height:100%;
+ overflow-x:hidden;
+ overflow-y:auto;
+ overscroll-behavior-y:auto;
+ -webkit-overflow-scrolling:touch;
+ background:var(--bg);
+ color:var(--text);
+ font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif
+}
 button,input,select{font:inherit} button{cursor:pointer}
-.app{max-width:1040px;margin:0 auto;padding:18px 16px 90px}
+.app{max-width:1040px;margin:0 auto;padding:18px 16px 90px;overflow:visible}
 header{padding:6px 2px 12px}
 h1{margin:0;font-size:24px}.sub{font-size:13px;color:var(--muted);margin-top:4px}
-.tabs{display:flex;gap:6px;margin:4px 0 16px;position:sticky;top:0;background:rgba(246,247,251,.94);backdrop-filter:blur(7px);padding:8px 0;z-index:3}
+.tabs{display:flex;gap:6px;margin:4px 0 16px;position:sticky;top:0;background:rgba(246,247,251,.94);backdrop-filter:blur(7px);padding:8px 0;z-index:3;overflow:visible}
 .tab{border:0;background:transparent;padding:9px 14px;border-radius:10px;color:var(--muted)}
 .tab.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
 .panel,.stat{background:var(--card);border:1px solid var(--line);border-radius:16px}
+.view,.panel,.library-body,.word-card,.test-box{overflow:visible}
 .panel{padding:16px;margin-top:12px}.panel h2{font-size:18px;margin:0 0 12px}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .stat{padding:15px}.stat span{font-size:12px;color:var(--muted)}.stat b{display:block;font-size:26px;margin-top:5px}
@@ -714,6 +731,9 @@ function renderAll(){
  if(!vocabLibrary.classList.contains("hidden"))renderVocabLibrary();
  if(!errorLibrary.classList.contains("hidden"))renderErrorLibrary();
 }
+document.documentElement.style.overflowY="auto";
+document.body.style.overflowY="auto";
+document.body.style.position="static";
 setStudySize(10);
 setTestSize(10);
 startStudyRound();
