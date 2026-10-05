@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.1.1</title>
+<title>小许 A2 学习系统 v2.3</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -196,7 +196,7 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
           <button class="session-choice" data-test-size="20" onclick="setTestSize(20)">20 个</button>
           <button class="session-choice" data-test-size="30" onclick="setTestSize(30)">30 个</button>
         </div>
-        <div class="session-hint" id="testSessionHint">只有完成首次学习的词才会进入新词测试；旧词到期复习不受这个数量限制。</div>
+        <div class="session-hint" id="testSessionHint">A 类：中文→输入俄语；R 类：俄语→中文四选一。G 与词义辨析仍单独测试。</div>
       </div>
       <div class="test-box">
         <div class="small" id="testType"></div>
@@ -318,7 +318,7 @@ const ERROR_INTERVALS=[24*60*60e3,3*864e5,7*864e5,14*864e5,30*864e5];
 let content=loadContent();
 let progress=loadProgress();
 let studyIndex=0, studyList=[], studyFlipped=false;
-let studyBatchSize=10, testNewWordLimit=10, studyRoundIds=[];
+let studyBatchSize=10, testNewWordLimit=10, studyRoundIds=[], studyRoundCompleted=false;
 let testQueue=[], currentTest=null;
 let errorQueue=[], currentError=null;
 
@@ -371,20 +371,22 @@ function setTestSize(n){
  testNewWordLimit=n;
  document.querySelectorAll("[data-test-size]").forEach(b=>b.classList.toggle("active",Number(b.dataset.testSize)===n));
  const eligible=activeVocab().filter(v=>{const p=ensureVocabProgress(v.id);return p.learned&&p.learnedDay===localDayKey()}).length;
- document.getElementById("testSessionHint").textContent=`今天已完成首次学习 ${eligible} 个；本轮最多抽取 ${n} 个新词。旧词到期复习另行加入。`;
+ document.getElementById("testSessionHint").textContent=`今天已完成首次学习 ${eligible} 个；本轮最多抽取 ${n} 个新词。A 类输入俄语，R 类中文四选一；旧词到期复习另行加入。`;
 }
 function startStudyRound(){
  const candidates=activeVocab().filter(v=>!ensureVocabProgress(v.id).learned);
  studyRoundIds=candidates.slice(0,studyBatchSize).map(v=>v.id);
+ studyRoundCompleted=false;
  studyIndex=0;
  renderStudy();
  const actual=studyRoundIds.length;
- document.getElementById("studySessionHint").textContent=actual?`本轮共 ${actual} 个新词；全部来自“尚未首次学习”。`:"当前没有尚未首次学习的新词。";
+ document.getElementById("studySessionHint").textContent=actual
+   ? `本轮共 ${actual} 个新词；完成首次学习后会立刻从本轮队列移除。`
+   : "当前没有尚未首次学习的新词。";
 }
 function dimForTask(type){return type==="R_ZH"?"recognition":type==="A_RU"?"active":type==="G"?"government":"sense"}
 function relevantDims(v){
- const a=["recognition"];
- if(v.level==="A")a.push("active");
+ const a=[v.level==="A" ? "active" : "recognition"];
  if(v.g&&(v.government||[]).length)a.push("government");
  if(v.sense_question)a.push("sense");
  return a;
@@ -439,18 +441,30 @@ function studyFiltered(){
  })
 }
 function renderStudy(){
- if(!studyRoundIds.length){
-   const candidates=activeVocab().filter(v=>!ensureVocabProgress(v.id).learned);
-   studyRoundIds=candidates.slice(0,studyBatchSize).map(v=>v.id);
+ studyList=studyRoundIds
+   .map(id=>content.vocabulary.find(v=>v.id===id))
+   .filter(v=>v && v.active!==false && !ensureVocabProgress(v.id).learned);
+
+ if(studyRoundCompleted){
+   const remaining=activeVocab().filter(v=>!ensureVocabProgress(v.id).learned).length;
+   studyCounter.textContent="本轮完成";
+   studyWord.textContent=remaining ? "🎉 本轮学习完成" : "🎉 所有新词已完成首次学习";
+   studyMeta.textContent=remaining ? `还有 ${remaining} 个未学词，可开始下一轮。` : "当前没有未学习的新词。";
+   studyBadges.innerHTML="";studyAnswer.innerHTML="";studyAnswer.classList.add("hidden");
+   flipBtn.disabled=true;flipBtn.textContent="翻转";learnedBtn.classList.add("hidden");return;
  }
- studyList=studyRoundIds.map(id=>content.vocabulary.find(v=>v.id===id)).filter(Boolean);
- if(studyIndex>=studyList.length)studyIndex=Math.max(0,studyList.length-1);
- const v=studyList[studyIndex];
- document.getElementById("studyCounter").textContent=v?`${studyIndex+1} / ${studyList.length}`:"0 / 0";
- if(!v){
-   studyWord.textContent="没有可学习的词";studyMeta.textContent="";studyBadges.innerHTML="";studyAnswer.innerHTML="";
+
+ if(!studyList.length){
+   studyCounter.textContent="尚未开始";
+   studyWord.textContent="选择 10 / 20 / 30 个";
+   studyMeta.textContent="然后点击“开始 / 重新抽取本轮”";
+   studyBadges.innerHTML="";studyAnswer.innerHTML="";studyAnswer.classList.add("hidden");
    flipBtn.disabled=true;learnedBtn.classList.add("hidden");return;
  }
+
+ if(studyIndex>=studyList.length)studyIndex=Math.max(0,studyList.length-1);
+ const v=studyList[studyIndex];
+ document.getElementById("studyCounter").textContent=`${studyIndex+1} / ${studyList.length}`;
  flipBtn.disabled=false;studyFlipped=false;
  const p=ensureVocabProgress(v.id);
  studyWord.textContent=v.word;
@@ -476,9 +490,19 @@ function flipStudy(){
 }
 function markLearned(){
  const v=studyList[studyIndex];if(!v||!studyFlipped)return;
- const p=ensureVocabProgress(v.id);p.learned=true;p.learnedAt=p.learnedAt||now();p.learnedDay=p.learnedDay||localDayKey();p.needsReconfirm=false;
+ const p=ensureVocabProgress(v.id);
+ p.learned=true;p.learnedAt=p.learnedAt||now();p.learnedDay=p.learnedDay||localDayKey();p.needsReconfirm=false;
  relevantDims(v).forEach(k=>{const d=p.dims[k];if(d.nextReview==null)d.nextReview=now()+REVIEW_INTERVALS[0]});
+
+ // A completed word leaves the learning queue immediately.
+ studyRoundIds=studyRoundIds.filter(id=>id!==v.id);
+ if(studyIndex>=studyRoundIds.length)studyIndex=Math.max(0,studyRoundIds.length-1);
+ if(studyRoundIds.length===0)studyRoundCompleted=true;
+
  saveProgress();renderAll();renderStudy();
+ document.getElementById("studySessionHint").textContent=studyRoundCompleted
+   ? "本轮已完成。下一轮只会抽取仍未首次学习的词。"
+   : `本轮还剩 ${studyRoundIds.length} 个未完成首次学习。`;
 }
 function nextStudy(){if(studyList.length){studyIndex=(studyIndex+1)%studyList.length;renderStudy()}}
 function prevStudy(){if(studyList.length){studyIndex=(studyIndex-1+studyList.length)%studyList.length;renderStudy()}}
@@ -487,8 +511,9 @@ function showVocabMode(m){
  studyModeBtn.classList.toggle("active",m==="study");testModeBtn.classList.toggle("active",m==="test");
  if(m==="study"){
    renderStudy();
-   const remaining=studyList.filter(v=>!ensureVocabProgress(v.id).learned).length;
-   document.getElementById("studySessionHint").textContent=`本轮 ${studyList.length} 个新词，尚有 ${remaining} 个未完成首次学习。`;
+   if(!studyRoundCompleted && studyRoundIds.length){
+     document.getElementById("studySessionHint").textContent=`本轮还剩 ${studyRoundIds.length} 个未完成首次学习。`;
+   }
  }else{
    setTestSize(testNewWordLimit);
  }
@@ -504,14 +529,72 @@ function acceptedActive(v){
 function acceptedMeanings(v){
  return [...new Set([v.meaning,...(v.accepted_meanings||[])].map(normalize).filter(Boolean))]
 }
+
+function shuffleCopy(arr){
+ const a=[...arr];
+ for(let i=a.length-1;i>0;i--){
+   const j=Math.floor(Math.random()*(i+1));
+   [a[i],a[j]]=[a[j],a[i]];
+ }
+ return a;
+}
+
+function primaryMeaning(v){
+ const arr=(v.accepted_meanings||[]).filter(Boolean);
+ return arr[0] || v.meaning || "";
+}
+
+function buildRecognitionOptions(v){
+ const correct=primaryMeaning(v);
+ const correctNorm=normalize(correct);
+
+ // Prefer distractors with the same part of speech/category.
+ let candidates=activeVocab().filter(x=>
+   x.id!==v.id &&
+   x.pos===v.pos &&
+   normalize(primaryMeaning(x))!==correctNorm
+ );
+
+ // If same-POS pool is too small, broaden carefully.
+ if(candidates.length<3){
+   const extra=activeVocab().filter(x=>
+     x.id!==v.id &&
+     normalize(primaryMeaning(x))!==correctNorm &&
+     !candidates.some(c=>c.id===x.id)
+   );
+   candidates=candidates.concat(extra);
+ }
+
+ const picked=[];
+ const seen=new Set([correctNorm]);
+ for(const x of shuffleCopy(candidates)){
+   const m=primaryMeaning(x);
+   const n=normalize(m);
+   if(!m || seen.has(n)) continue;
+   // Avoid distractors that substantially overlap the correct Chinese wording.
+   if(correctNorm.includes(n) || n.includes(correctNorm)) continue;
+   picked.push(m);
+   seen.add(n);
+   if(picked.length===3) break;
+ }
+
+ // Fallback labels only if the vocabulary is too tiny to form 4 real options.
+ while(picked.length<3){
+   const fallback=["其他含义","另一个词义","以上都不是"][picked.length];
+   if(!seen.has(normalize(fallback))) picked.push(fallback);
+ }
+
+ return shuffleCopy([correct,...picked.slice(0,3)]);
+}
 function tasksForVocab(v,{forceAll=false}={}){
  const p=ensureVocabProgress(v.id),tasks=[];
  const add=(type,extra={})=>{
    const d=p.dims[dimForTask(type)];
    if(forceAll||isDueDim(d)||p.needsReconfirm)tasks.push({vocabId:v.id,type,...extra});
  };
- add("R_ZH");
+ // A: Chinese -> Russian only. R: Russian -> Chinese only.
  if(v.level==="A")add("A_RU");
+ else add("R_ZH");
  if(v.g)(v.government||[]).forEach((g,i)=>add("G",{govIndex:i}));
  if(v.sense_question)add("SENSE");
  return tasks;
@@ -542,8 +625,8 @@ function buildTestQueue(){
 function startTest(){
  const eligible=activeVocab().filter(v=>{const p=ensureVocabProgress(v.id);return p.learned&&p.learnedDay===localDayKey()}).length;
  document.getElementById("testSessionHint").textContent=eligible<testNewWordLimit
-   ? `今天只完成了 ${eligible} 个新词的首次学习，因此本轮新词最多测试 ${eligible} 个；不会加入未学习词。旧词到期复习照常加入。`
-   : `本轮测试 ${testNewWordLimit} 个今天新学词；旧词到期复习照常加入。`;
+   ? `今天只完成了 ${eligible} 个新词的首次学习，因此本轮新词最多测试 ${eligible} 个；不会加入未学习词。A 类输入俄语，R 类中文四选一。`
+   : `本轮测试 ${testNewWordLimit} 个今天新学词；A 类输入俄语，R 类中文四选一；旧词到期复习照常加入。`;
  testQueue=buildTestQueue();startTestBtn.classList.add("hidden");nextTestBtn.classList.add("hidden");
  if(!testQueue.length){testQuestion.textContent="还没有可测试内容。先完成新词首次学习，或等待旧词复习到期。";startTestBtn.classList.remove("hidden");return}
  loadNextTest();
@@ -553,7 +636,19 @@ function loadNextTest(){
  currentTest=testQueue.shift();
  if(!currentTest){testType.textContent="";testQuestion.textContent="🎉 本轮测试完成";testInput.classList.add("hidden");startTestBtn.classList.remove("hidden");startTestBtn.textContent="再来一轮";renderAll();return}
  const v=content.vocabulary.find(x=>x.id===currentTest.vocabId);
- if(currentTest.type==="R_ZH"){testType.textContent="R · 俄 → 中";testQuestion.textContent=v.word;testInput.placeholder="输入中文核心义"}
+ if(currentTest.type==="R_ZH"){
+   testType.textContent="R · 识别词 · 俄 → 中";
+   testQuestion.textContent=v.word;
+   testInput.classList.add("hidden");
+   testOptions.classList.remove("hidden");
+   buildRecognitionOptions(v).forEach(opt=>{
+     const b=document.createElement("button");
+     b.className="option";
+     b.textContent=opt;
+     b.onclick=()=>checkTest(opt);
+     testOptions.appendChild(b);
+   });
+ }
  if(currentTest.type==="A_RU"){testType.textContent="A · 中 → 俄";testQuestion.textContent=v.meaning;testInput.placeholder="未完成体或完成体均可；不要求输入重音"}
  if(currentTest.type==="G"){const g=v.government[currentTest.govIndex];testType.textContent="G · 格支配";testQuestion.textContent=`${v.word}：${g.pattern} —— 要求第几格？`;testInput.placeholder="可答：чего / 2格 / 二格 / родительный"}
  if(currentTest.type==="SENSE"){testType.textContent="词义辨析";testQuestion.textContent=v.sense_question.prompt;testInput.classList.add("hidden");testOptions.classList.remove("hidden");v.sense_question.options.forEach(o=>{const b=document.createElement("button");b.className="option";b.textContent=o;b.onclick=()=>checkTest(o);testOptions.appendChild(b)})}
@@ -565,7 +660,10 @@ function matchesAny(raw,arr){
 }
 function checkTest(raw){
  const v=content.vocabulary.find(x=>x.id===currentTest.vocabId);let ok=false,ans="";
- if(currentTest.type==="R_ZH"){ok=matchesAny(raw,acceptedMeanings(v));ans=v.meaning}
+ if(currentTest.type==="R_ZH"){
+   ok=acceptedMeanings(v).includes(normalize(raw));
+   ans=primaryMeaning(v);
+ }
  if(currentTest.type==="A_RU"){ok=acceptedActive(v).includes(normalize(raw));ans=acceptedActive(v).join(" / ")}
  if(currentTest.type==="G"){const g=v.government[currentTest.govIndex];ok=matchesAny(raw,g.accepted_answers||[]);ans=(g.accepted_answers||[]).slice(0,4).join(" / ")}
  if(currentTest.type==="SENSE"){ok=normalize(raw)===normalize(v.sense_question.answer);ans=v.sense_question.answer}
@@ -628,7 +726,7 @@ function renderVocabLibrary(){
  let start=Math.min(Number(vocabSlider.value)||0,max);vocabSlider.value=start;
  vocabSliderLabel.textContent=arr.length?`${start+1} / ${arr.length}`:"0 / 0";
  const shown=arr.slice(start,start+VISIBLE_BATCH);
- vocabList.innerHTML=shown.map(v=>{const p=ensureVocabProgress(v.id);return`<div class="list-card"><div class="list-top"><div><div class="list-word">${esc(v.word)}</div><div class="item-meta">${esc(v.meaning)} · ${v.level}${v.g?"/G":""} · ${esc(v.source||"")}</div></div><div class="small">${v.active===false?"已归档":p.learned?"已学":"未学"}</div></div><div class="item-meta">${p.learned?`R:${p.dims.recognition.stage+1}${v.level==="A"?` · A:${p.dims.active.stage+1}`:""}${v.g?` · G:${p.dims.government.stage+1}`:""}`:"等待首次学习"}${vocabWeakCount(v)?` · ⚠️ ${vocabWeakCount(v)} 个薄弱维度`:""}</div></div>`}).join("")||'<div class="small">没有符合条件的词。</div>';
+ vocabList.innerHTML=shown.map(v=>{const p=ensureVocabProgress(v.id);return`<div class="list-card"><div class="list-top"><div><div class="list-word">${esc(v.word)}</div><div class="item-meta">${esc(v.meaning)} · ${v.level}${v.g?"/G":""} · ${esc(v.source||"")}</div></div><div class="small">${v.active===false?"已归档":p.learned?"已学":"未学"}</div></div><div class="item-meta">${p.learned?`${v.level==="A"?`A:${p.dims.active.stage+1}`:`R:${p.dims.recognition.stage+1}`}${v.g?` · G:${p.dims.government.stage+1}`:""}${v.sense_question?` · 辨析:${p.dims.sense.stage+1}`:""}`:"等待首次学习"}${vocabWeakCount(v)?` · ⚠️ ${vocabWeakCount(v)} 个薄弱维度`:""}</div></div>`}).join("")||'<div class="small">没有符合条件的词。</div>';
  const av=activeVocab();vocabSummary.innerHTML=`<span class="chip">总词数 ${av.length}</span><span class="chip">A ${av.filter(v=>v.level==="A").length}</span><span class="chip">R ${av.filter(v=>v.level==="R").length}</span><span class="chip">G ${av.filter(v=>v.g).length}</span><span class="chip">未学 ${av.filter(v=>!ensureVocabProgress(v.id).learned).length}</span>`;
  vocabTotalLabel.textContent=`${av.length} 个`;
 }
@@ -723,7 +821,7 @@ backupBtn.onclick=()=>{
  showModal(`<h3>最近自动备份</h3>${b.length?b.map((x,i)=>`<div class="item" style="margin-top:8px"><b>${new Date(x.time).toLocaleString("zh-CN")}</b><div class="item-meta">备份 ${i+1} · ${x.content.vocabulary.length} 词 · ${x.content.errors.length} 错题</div><button class="btn" style="margin-top:8px" onclick="restoreBackup(${i})">恢复此备份</button></div>`).join(""):'<div class="small">还没有自动备份。第一次导入学习包前会自动建立。</div>'}<div class="modal-actions"><button class="btn" onclick="hideModal()">关闭</button></div>`);
 }
 function restoreBackup(i){const b=getBackups()[i];if(!b)return;content=clone(b.content);progress=clone(b.progress);saveAll();hideModal()}
-resetBtn.onclick=()=>{if(confirm("确定重置为示例数据吗？当前本地学习数据会清空。")){content=clone(SAMPLE_CONTENT);progress={vocab:{},errors:{}};studyRoundIds=[];studyIndex=0;saveAll()}}
+resetBtn.onclick=()=>{if(confirm("确定重置为示例数据吗？当前本地学习数据会清空。")){content=clone(SAMPLE_CONTENT);progress={vocab:{},errors:{}};studyRoundIds=[];studyRoundCompleted=false;studyIndex=0;saveAll()}}
 
 function renderAll(){
  renderHome();renderStudy();
@@ -736,7 +834,6 @@ document.body.style.overflowY="auto";
 document.body.style.position="static";
 setStudySize(10);
 setTestSize(10);
-startStudyRound();
 renderAll();
 </script>
 </body>
