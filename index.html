@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.4</title>
+<title>小许 A2 学习系统 v2.5</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -71,6 +71,19 @@ h1{margin:0;font-size:24px}.sub{font-size:13px;color:var(--muted);margin-top:4px
 .session-choice{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 11px}
 .session-choice.active{background:var(--primary);border-color:var(--primary);color:#fff}
 .session-hint{margin-top:7px;font-size:12px;color:var(--muted);line-height:1.5}
+.test-overview{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.test-overview-title{font-size:13px;font-weight:700;margin-bottom:9px}
+.test-overview-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.test-overview-stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 8px;min-width:0}
+.test-overview-stat span{display:block;font-size:11px;color:var(--muted);line-height:1.25}
+.test-overview-stat b{display:block;font-size:20px;margin-top:3px}
+.test-word-toggle{width:100%;border:0;background:transparent;padding:10px 0 2px;text-align:left;font-weight:650;color:var(--text)}
+.test-word-groups{padding-top:5px}
+.test-word-group{margin-top:8px}
+.test-word-group-title{font-size:12px;color:var(--muted);margin-bottom:5px}
+.test-word-chips{display:flex;gap:6px;flex-wrap:wrap}
+.test-word-chip{font-size:12px;padding:5px 8px;border-radius:999px;background:#fff;border:1px solid var(--line)}
+.test-word-chip.weak{background:var(--warn-bg);border-color:#f3dfad;color:var(--warn)}
 .test-box{max-width:720px;margin:0 auto;padding:8px 0}
 .question{font-size:23px;font-weight:720;line-height:1.45;margin:12px 0 16px}
 .answer-input{width:100%;border:1px solid #cbd3df;border-radius:10px;padding:12px 13px}
@@ -102,6 +115,8 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
  .app{padding:10px 10px 80px}.grid{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}
  .word{font-size:32px}.word-card{min-height:330px}.nav-row{gap:8px}.btn{padding:9px 10px}
  .question{font-size:21px}.panel{padding:13px}.modal-grid{grid-template-columns:1fr 1fr}
+ .test-overview-grid{grid-template-columns:repeat(2,1fr)}
+ .test-overview-stat:first-child{grid-column:span 2}
 }
 </style>
 </head>
@@ -197,6 +212,31 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
           <button class="session-choice" data-test-size="30" onclick="setTestSize(30)">30 个</button>
         </div>
         <div class="session-hint" id="testSessionHint">A 类：中文→输入俄语；R 类：俄语→中文四选一。G 与词义辨析仍单独测试。</div>
+        <div class="test-overview">
+          <div class="test-overview-title">本轮测试总览</div>
+          <div class="test-overview-grid">
+            <div class="test-overview-stat"><span>不同单词总数</span><b id="testPlanTotalWords">0</b></div>
+            <div class="test-overview-stat"><span>预计题目</span><b id="testPlanTotalTasks">0</b></div>
+            <div class="test-overview-stat"><span>今日新词</span><b id="testPlanNewWords">0</b></div>
+            <div class="test-overview-stat"><span>到期旧词</span><b id="testPlanDueWords">0</b></div>
+            <div class="test-overview-stat"><span>其中薄弱词</span><b id="testPlanWeakWords">0</b></div>
+          </div>
+          <button class="test-word-toggle" id="testWordToggle" onclick="toggleTestWordList()">▸ 查看本轮词单</button>
+          <div class="test-word-groups hidden" id="testWordGroups">
+            <div class="test-word-group">
+              <div class="test-word-group-title">今日新词 <span id="testNewWordListCount"></span></div>
+              <div class="test-word-chips" id="testNewWordList"></div>
+            </div>
+            <div class="test-word-group">
+              <div class="test-word-group-title">到期旧词 <span id="testDueWordListCount"></span></div>
+              <div class="test-word-chips" id="testDueWordList"></div>
+            </div>
+            <div class="test-word-group">
+              <div class="test-word-group-title">薄弱词（包含在上面两类中） <span id="testWeakWordListCount"></span></div>
+              <div class="test-word-chips" id="testWeakWordList"></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="test-box">
         <div class="small" id="testType"></div>
@@ -319,7 +359,7 @@ let content=loadContent();
 let progress=loadProgress();
 let studyIndex=0, studyList=[], studyFlipped=false;
 let studyBatchSize=10, testNewWordLimit=10, studyRoundIds=[], studyRoundCompleted=false;
-let testQueue=[], currentTest=null;
+let testQueue=[], currentTest=null, currentTestPlan=null;
 let errorQueue=[], currentError=null;
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
@@ -369,9 +409,11 @@ function setStudySize(n){
 }
 function setTestSize(n){
  testNewWordLimit=n;
+ currentTestPlan=null;
  document.querySelectorAll("[data-test-size]").forEach(b=>b.classList.toggle("active",Number(b.dataset.testSize)===n));
  const eligible=activeVocab().filter(v=>{const p=ensureVocabProgress(v.id);return p.learned&&p.learnedDay===localDayKey()}).length;
  document.getElementById("testSessionHint").textContent=`今天已完成首次学习 ${eligible} 个；本轮最多抽取 ${n} 个新词。A 类输入俄语，R 类中文四选一；旧词到期复习另行加入。`;
+ renderTestPlan();
 }
 function startStudyRound(){
  const candidates=activeVocab().filter(v=>!ensureVocabProgress(v.id).learned);
@@ -398,6 +440,65 @@ function recentWeak(dim){
  return wrong>=2 || (dim.streak===0 && dim.wrong>0) || wrong/r.length>=0.4;
 }
 function vocabWeakCount(v){const p=ensureVocabProgress(v.id);return relevantDims(v).filter(k=>recentWeak(p.dims[k])).length}
+
+function computeTestPlan(){
+ const today=localDayKey();
+ const learned=activeVocab().filter(v=>ensureVocabProgress(v.id).learned);
+
+ const todaysNew=learned.filter(v=>ensureVocabProgress(v.id).learnedDay===today);
+ const selectedNew=todaysNew.slice(0,testNewWordLimit);
+
+ const dueOld=learned.filter(v=>{
+   const p=ensureVocabProgress(v.id);
+   if(p.learnedDay===today) return false;
+   return tasksForVocab(v,{forceAll:false}).length>0;
+ });
+
+ const byId=new Map();
+ [...selectedNew,...dueOld].forEach(v=>byId.set(v.id,v));
+ const allWords=[...byId.values()];
+ const weakWords=allWords.filter(v=>vocabWeakCount(v)>0);
+
+ let totalTasks=0;
+ selectedNew.forEach(v=>totalTasks+=tasksForVocab(v,{forceAll:true}).length);
+ dueOld.forEach(v=>totalTasks+=tasksForVocab(v,{forceAll:false}).length);
+
+ return {selectedNew,dueOld,allWords,weakWords,totalTasks};
+}
+
+function renderWordChips(targetId,words,weakMode=false){
+ const el=document.getElementById(targetId);
+ if(!el)return;
+ if(!words.length){
+   el.innerHTML='<span class="small">无</span>';
+   return;
+ }
+ el.innerHTML=words.map(v=>`<span class="test-word-chip ${weakMode?"weak":""}">${esc(v.word)}</span>`).join("");
+}
+
+function renderTestPlan(plan=null){
+ const p=plan||computeTestPlan();
+ testPlanTotalWords.textContent=p.allWords.length;
+ testPlanTotalTasks.textContent=p.totalTasks;
+ testPlanNewWords.textContent=p.selectedNew.length;
+ testPlanDueWords.textContent=p.dueOld.length;
+ testPlanWeakWords.textContent=p.weakWords.length;
+
+ testNewWordListCount.textContent=`(${p.selectedNew.length})`;
+ testDueWordListCount.textContent=`(${p.dueOld.length})`;
+ testWeakWordListCount.textContent=`(${p.weakWords.length})`;
+ renderWordChips("testNewWordList",p.selectedNew,false);
+ renderWordChips("testDueWordList",p.dueOld,false);
+ renderWordChips("testWeakWordList",p.weakWords,true);
+}
+
+function toggleTestWordList(){
+ const body=document.getElementById("testWordGroups");
+ const btn=document.getElementById("testWordToggle");
+ const show=body.classList.contains("hidden");
+ body.classList.toggle("hidden",!show);
+ btn.textContent=show?"▾ 收起本轮词单":"▸ 查看本轮词单";
+}
 function isDueDim(d){return d.nextReview!=null && d.nextReview<=now()}
 function dueVocabTasksCount(){
  let n=0;activeVocab().forEach(v=>{const p=ensureVocabProgress(v.id);if(!p.learned)return;relevantDims(v).forEach(k=>{if(isDueDim(p.dims[k]))n++})});return n
@@ -515,7 +616,9 @@ function showVocabMode(m){
      document.getElementById("studySessionHint").textContent=`本轮还剩 ${studyRoundIds.length} 个未完成首次学习。`;
    }
  }else{
-   setTestSize(testNewWordLimit);
+   document.querySelectorAll("[data-test-size]").forEach(b=>b.classList.toggle("active",Number(b.dataset.testSize)===testNewWordLimit));
+   if(currentTestPlan) renderTestPlan(currentTestPlan);
+   else renderTestPlan();
  }
 }
 
@@ -599,35 +702,24 @@ function tasksForVocab(v,{forceAll=false}={}){
  if(v.sense_question)add("SENSE");
  return tasks;
 }
-function buildTestQueue(){
- const today=localDayKey();
- const learned=activeVocab().filter(v=>ensureVocabProgress(v.id).learned);
-
- // 1) Old/due review tasks: learned before today, or today's words whose dimensions are already due.
+function buildTestQueue(plan=null){
+ const p=plan||computeTestPlan();
  let reviewTasks=[];
- learned.forEach(v=>{
-   const p=ensureVocabProgress(v.id);
-   const due=tasksForVocab(v,{forceAll:false});
-   if(p.learnedDay!==today) reviewTasks.push(...due);
- });
+ p.dueOld.forEach(v=>reviewTasks.push(...tasksForVocab(v,{forceAll:false})));
 
- // 2) Today's newly learned words: choose at most 10/20/30 WORDS.
- // A selected word can generate multiple tasks (R/A/G/sense).
- const todaysNew=learned.filter(v=>ensureVocabProgress(v.id).learnedDay===today);
- const selectedNew=todaysNew.slice(0,testNewWordLimit);
  let newTasks=[];
- selectedNew.forEach(v=>newTasks.push(...tasksForVocab(v,{forceAll:true})));
+ p.selectedNew.forEach(v=>newTasks.push(...tasksForVocab(v,{forceAll:true})));
 
- // If a today's-new word has already been tested in this session and is now due because of an error,
- // retry insertion is handled later by checkTest().
  return [...reviewTasks.sort(()=>Math.random()-.5),...newTasks.sort(()=>Math.random()-.5)];
 }
 function startTest(){
  const eligible=activeVocab().filter(v=>{const p=ensureVocabProgress(v.id);return p.learned&&p.learnedDay===localDayKey()}).length;
+ currentTestPlan=computeTestPlan();
+ renderTestPlan(currentTestPlan);
  document.getElementById("testSessionHint").textContent=eligible<testNewWordLimit
-   ? `今天只完成了 ${eligible} 个新词的首次学习，因此本轮新词最多测试 ${eligible} 个；不会加入未学习词。A 类输入俄语，R 类中文四选一。`
-   : `本轮测试 ${testNewWordLimit} 个今天新学词；A 类输入俄语，R 类中文四选一；旧词到期复习照常加入。`;
- testQueue=buildTestQueue();startTestBtn.classList.add("hidden");nextTestBtn.classList.add("hidden");
+   ? `今天只完成了 ${eligible} 个新词的首次学习，因此本轮新词最多测试 ${eligible} 个；不会加入未学习词。`
+   : `本轮已固定：${currentTestPlan.allWords.length} 个不同单词，预计 ${currentTestPlan.totalTasks} 道题。`;
+ testQueue=buildTestQueue(currentTestPlan);startTestBtn.classList.add("hidden");nextTestBtn.classList.add("hidden");
  if(!testQueue.length){testQuestion.textContent="还没有可测试内容。先完成新词首次学习，或等待旧词复习到期。";startTestBtn.classList.remove("hidden");return}
  loadNextTest();
 }
@@ -878,6 +970,10 @@ resetBtn.onclick=()=>{if(confirm("确定重置为示例数据吗？当前本地�
 function renderAll(){
  renderHome();renderStudy();
  vocabTotalLabel.textContent=`${activeVocab().length} 个`;errorTotalLabel.textContent=`${activeErrors().length} 道`;
+ if(document.getElementById("testPlanTotalWords")){
+   if(currentTestPlan) renderTestPlan(currentTestPlan);
+   else renderTestPlan();
+ }
  if(!vocabLibrary.classList.contains("hidden"))renderVocabLibrary();
  if(!errorLibrary.classList.contains("hidden"))renderErrorLibrary();
 }
