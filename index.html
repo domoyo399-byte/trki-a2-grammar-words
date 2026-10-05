@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.3</title>
+<title>小许 A2 学习系统 v2.4</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -650,13 +650,61 @@ function loadNextTest(){
    });
  }
  if(currentTest.type==="A_RU"){testType.textContent="A · 中 → 俄";testQuestion.textContent=v.meaning;testInput.placeholder="未完成体或完成体均可；不要求输入重音"}
- if(currentTest.type==="G"){const g=v.government[currentTest.govIndex];testType.textContent="G · 格支配";testQuestion.textContent=`${v.word}：${g.pattern} —— 要求第几格？`;testInput.placeholder="可答：чего / 2格 / 二格 / родительный"}
+ if(currentTest.type==="G"){
+   const g=v.government[currentTest.govIndex];
+   testType.textContent="G · 格支配";
+   testQuestion.textContent=`${v.word}：${g.pattern} —— 要求第几格？`;
+   testInput.placeholder=`可答：${g.case_cn||"格"} / ${g.case||""} / 格问词或完整结构`;
+}
  if(currentTest.type==="SENSE"){testType.textContent="词义辨析";testQuestion.textContent=v.sense_question.prompt;testInput.classList.add("hidden");testOptions.classList.remove("hidden");v.sense_question.options.forEach(o=>{const b=document.createElement("button");b.className="option";b.textContent=o;b.onclick=()=>checkTest(o);testOptions.appendChild(b)})}
  setTimeout(()=>{if(!testInput.classList.contains("hidden"))testInput.focus()},30);
 }
 testInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!testInput.disabled)checkTest(testInput.value)});
 function matchesAny(raw,arr){
  const x=normalize(raw);return arr.some(a=>{const y=normalize(a);return x===y || (/[一-龥]/.test(x)&&x.length>0&&(y.includes(x)||x.includes(y)))})
+}
+
+function stripGovernmentPrepositions(s){
+ const preps=new Set([
+   "в","во","на","за","с","со","о","об","обо","к","ко","от","до","из","изо","у",
+   "для","без","после","перед","под","над","между","через","про","по","при"
+ ]);
+ return normalize(s).split(" ").filter(t=>t && !preps.has(t)).join(" ");
+}
+
+function governmentCasePair(caseNo){
+ const pairs={
+   1:["кто что"],
+   2:["кого чего"],
+   3:["кому чему"],
+   4:["кого что"],
+   5:["кем чем"],
+   6:["ком чем"]
+ };
+ return pairs[caseNo]||[];
+}
+
+function governmentMatches(raw,g){
+ // Existing labels/numbers remain valid.
+ if(matchesAny(raw,g.accepted_answers||[])) return true;
+
+ // For a case-government question, prepositions are part of the lexical structure,
+ // but they should not make an otherwise correct case answer fail.
+ const x=stripGovernmentPrepositions(raw);
+ const accepted=(g.accepted_answers||[]).map(stripGovernmentPrepositions);
+ if(accepted.includes(x)) return true;
+
+ // Accept the normal paired case questions, e.g. кого? что?,
+ // regardless of whether the learner writes the governing preposition(s).
+ const pairs=governmentCasePair(Number(g.case_no));
+ if(pairs.includes(x)) return true;
+
+ return false;
+}
+
+function governmentAnswerLabel(g){
+ const caseLabel=[g.case_cn,g.case].filter(Boolean).join(" / ");
+ return `${caseLabel}${g.pattern?`；结构：${g.pattern}`:""}`;
 }
 function checkTest(raw){
  const v=content.vocabulary.find(x=>x.id===currentTest.vocabId);let ok=false,ans="";
@@ -665,7 +713,11 @@ function checkTest(raw){
    ans=primaryMeaning(v);
  }
  if(currentTest.type==="A_RU"){ok=acceptedActive(v).includes(normalize(raw));ans=acceptedActive(v).join(" / ")}
- if(currentTest.type==="G"){const g=v.government[currentTest.govIndex];ok=matchesAny(raw,g.accepted_answers||[]);ans=(g.accepted_answers||[]).slice(0,4).join(" / ")}
+ if(currentTest.type==="G"){
+   const g=v.government[currentTest.govIndex];
+   ok=governmentMatches(raw,g);
+   ans=governmentAnswerLabel(g);
+ }
  if(currentTest.type==="SENSE"){ok=normalize(raw)===normalize(v.sense_question.answer);ans=v.sense_question.answer}
  recordVocab(v,currentTest.type,ok);
  testInput.disabled=true;[...testOptions.children].forEach(x=>x.disabled=true);
