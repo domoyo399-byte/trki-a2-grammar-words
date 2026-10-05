@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.6.1</title>
+<title>小许 A2 学习系统 v2.7</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -152,6 +152,10 @@ h1{margin:0;font-size:24px}.sub{font-size:13px;color:var(--muted);margin-top:4px
 .answer-input{width:100%;border:1px solid #cbd3df;border-radius:10px;padding:12px 13px}
 .feedback{padding:12px;border-radius:10px;margin-top:12px;line-height:1.6}.feedback.good{background:var(--good-bg);color:var(--good)}.feedback.bad{background:var(--bad-bg);color:var(--bad)}
 .option-list{display:grid;gap:8px}.option{border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px;text-align:left}
+.error-option-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.error-option{border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px;text-align:center;font-weight:650}
+.error-option:disabled{opacity:.72}
+@media(max-width:520px){.error-option-list{grid-template-columns:1fr 1fr}.error-option{padding:11px 8px}}
 .library-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:transparent;padding:2px 0;font-weight:700;color:var(--text)}
 .library-body{margin-top:12px}
 .search{flex:1;min-width:160px;border:1px solid var(--line);border-radius:9px;padding:9px 10px}
@@ -377,10 +381,9 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
       <div class="test-box">
         <div class="small" id="errorMeta"></div>
         <div class="question" id="errorQuestion"></div>
-        <input id="errorInput" class="answer-input" placeholder="输入你的答案">
+        <div id="errorOptions" class="error-option-list"></div>
         <div id="errorFeedback"></div>
         <div class="toolbar" style="justify-content:center;margin-top:14px">
-          <button class="btn primary" id="checkErrorBtn" onclick="checkError()">提交</button>
           <button class="btn soft hidden" id="nextErrorBtn" onclick="nextError()">下一题</button>
         </div>
       </div>
@@ -431,7 +434,7 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
 <div id="modalMask" class="modal-mask hidden"><div class="modal" id="modal"></div></div>
 
 <script>
-const SAMPLE_CONTENT = {"schema_version": "2.0", "student": "小许", "batch": "XUXU-A2-VOCAB-001", "vocabulary": [{"id": "XU-V-000001", "word": "встреча́ть", "plain": "встречать", "pos": "动词", "level": "A", "g": true, "meaning": "接、迎接；遇见", "accepted_meanings": ["接", "迎接", "遇见", "接人"], "aspect": {"impf": "встреча́ть", "pf": "встре́тить"}, "accepted_active_answers": ["встречать", "встретить"], "government": [{"pattern": "встреча́ть кого? что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "винительный падеж", "4", "4格", "四格", "кого", "что", "кого? что?"]}], "usage": ["встреча́ть друга", "встреча́ть гостей"], "example": "Я встреча́ю друга на вокза́ле.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000002", "word": "горди́ться", "plain": "гордиться", "pos": "动词", "level": "A", "g": true, "meaning": "为……感到骄傲", "accepted_meanings": ["为……感到骄傲", "感到骄傲", "以……为傲"], "aspect": {"impf": "горди́ться", "pf": null}, "accepted_active_answers": ["гордиться"], "government": [{"pattern": "горди́ться кем? чем?", "case": "творительный", "case_no": 5, "case_cn": "五格", "accepted_answers": ["творительный", "творительный падеж", "5", "5格", "五格", "кем", "чем", "кем? чем?"]}], "usage": ["горди́ться сы́ном", "горди́ться свои́ми ученика́ми"], "example": "Она́ горди́тся свои́м сы́ном.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000003", "word": "экску́рсия", "plain": "экскурсия", "pos": "名词", "level": "R", "g": false, "meaning": "参观；游览；讲解活动", "accepted_meanings": ["参观", "游览", "讲解活动", "参观活动", "游览活动"], "aspect": null, "accepted_active_answers": [], "government": [], "usage": ["ходи́ть на экску́рсию", "интере́сная экску́рсия"], "example": "Сего́дня в музе́е интере́сная экску́рсия.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000004", "word": "плати́ть", "plain": "платить", "pos": "动词", "level": "A", "g": true, "meaning": "支付；付款", "accepted_meanings": ["支付", "付款", "付钱"], "aspect": {"impf": "плати́ть", "pf": "заплати́ть"}, "accepted_active_answers": ["платить", "заплатить"], "government": [{"pattern": "плати́ть за кого? за что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого", "что", "кого? что?"]}, {"pattern": "плати́ть кому?", "case": "дательный", "case_no": 3, "case_cn": "三格", "accepted_answers": ["дательный", "3", "3格", "三格", "кому"]}], "usage": ["плати́ть за биле́т", "плати́ть врачу́"], "example": "Я заплати́л за биле́т.", "source": "示例词库", "sense_question": {"prompt": "“плати́ть” 和 “купи́ть” 哪个表示“付款/支付”而不是“购买”？", "options": ["плати́ть", "купи́ть"], "answer": "плати́ть"}, "revision": 1, "active": true}, {"id": "XU-V-000005", "word": "одева́ть", "plain": "одевать", "pos": "动词", "level": "A", "g": true, "meaning": "给某人穿衣服", "accepted_meanings": ["给某人穿衣服", "给……穿衣"], "aspect": {"impf": "одева́ть", "pf": "оде́ть"}, "accepted_active_answers": ["одевать", "одеть"], "government": [{"pattern": "одева́ть кого?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого"]}], "usage": ["одева́ть ребёнка"], "example": "Ма́ма одева́ет ребёнка.", "source": "示例词库", "sense_question": {"prompt": "“自己穿上外套”更适合用哪个动词？", "options": ["одева́ть", "надева́ть"], "answer": "надева́ть"}, "revision": 1, "active": true}, {"id": "XU-V-000006", "word": "похо́жий", "plain": "похожий", "pos": "形容词", "level": "R", "g": true, "meaning": "相像的；类似的", "accepted_meanings": ["相像的", "类似的", "相似的"], "aspect": null, "accepted_active_answers": [], "government": [{"pattern": "похо́жий на кого? на что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого", "что", "кого? что?"]}], "usage": ["похо́жий на ма́му", "э́ти слова́ похо́жи"], "example": "Он похо́ж на отца́.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}], "errors": [{"id": "XU-E-000001", "prompt": "Анна вчера ___ в театр.", "student_answer": "ходил", "correct_answer": "ходила", "accepted_answers": ["ходила"], "explanation": "过去时需要和主语在性、数上保持一致；Анна 是阴性单数，所以用 ходила。", "tags": ["过去时", "性数一致"], "source": "示例错题", "revision": 1, "active": true}, {"id": "XU-E-000002", "prompt": "Мы едем ___ метро.", "student_answer": "в", "correct_answer": "на метро", "accepted_answers": ["на метро"], "explanation": "表示乘坐交通工具时常用 на + 前置格：на метро, на автобусе。", "tags": ["介词", "交通工具"], "source": "示例错题", "revision": 1, "active": true}, {"id": "XU-E-000003", "prompt": "Я горжусь ___ . (мой брат)", "student_answer": "мой брат", "correct_answer": "моим братом", "accepted_answers": ["моим братом"], "explanation": "гордиться кем? чем? 要求工具格（五格）。", "tags": ["格支配", "五格"], "source": "示例错题", "revision": 1, "active": true}]};
+const SAMPLE_CONTENT = {"schema_version": "2.0", "student": "小许", "batch": "XUXU-A2-VOCAB-001", "vocabulary": [{"id": "XU-V-000001", "word": "встреча́ть", "plain": "встречать", "pos": "动词", "level": "A", "g": true, "meaning": "接、迎接；遇见", "accepted_meanings": ["接", "迎接", "遇见", "接人"], "aspect": {"impf": "встреча́ть", "pf": "встре́тить"}, "accepted_active_answers": ["встречать", "встретить"], "government": [{"pattern": "встреча́ть кого? что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "винительный падеж", "4", "4格", "四格", "кого", "что", "кого? что?"]}], "usage": ["встреча́ть друга", "встреча́ть гостей"], "example": "Я встреча́ю друга на вокза́ле.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000002", "word": "горди́ться", "plain": "гордиться", "pos": "动词", "level": "A", "g": true, "meaning": "为……感到骄傲", "accepted_meanings": ["为……感到骄傲", "感到骄傲", "以……为傲"], "aspect": {"impf": "горди́ться", "pf": null}, "accepted_active_answers": ["гордиться"], "government": [{"pattern": "горди́ться кем? чем?", "case": "творительный", "case_no": 5, "case_cn": "五格", "accepted_answers": ["творительный", "творительный падеж", "5", "5格", "五格", "кем", "чем", "кем? чем?"]}], "usage": ["горди́ться сы́ном", "горди́ться свои́ми ученика́ми"], "example": "Она́ горди́тся свои́м сы́ном.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000003", "word": "экску́рсия", "plain": "экскурсия", "pos": "名词", "level": "R", "g": false, "meaning": "参观；游览；讲解活动", "accepted_meanings": ["参观", "游览", "讲解活动", "参观活动", "游览活动"], "aspect": null, "accepted_active_answers": [], "government": [], "usage": ["ходи́ть на экску́рсию", "интере́сная экску́рсия"], "example": "Сего́дня в музе́е интере́сная экску́рсия.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}, {"id": "XU-V-000004", "word": "плати́ть", "plain": "платить", "pos": "动词", "level": "A", "g": true, "meaning": "支付；付款", "accepted_meanings": ["支付", "付款", "付钱"], "aspect": {"impf": "плати́ть", "pf": "заплати́ть"}, "accepted_active_answers": ["платить", "заплатить"], "government": [{"pattern": "плати́ть за кого? за что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого", "что", "кого? что?"]}, {"pattern": "плати́ть кому?", "case": "дательный", "case_no": 3, "case_cn": "三格", "accepted_answers": ["дательный", "3", "3格", "三格", "кому"]}], "usage": ["плати́ть за биле́т", "плати́ть врачу́"], "example": "Я заплати́л за биле́т.", "source": "示例词库", "sense_question": {"prompt": "“плати́ть” 和 “купи́ть” 哪个表示“付款/支付”而不是“购买”？", "options": ["плати́ть", "купи́ть"], "answer": "плати́ть"}, "revision": 1, "active": true}, {"id": "XU-V-000005", "word": "одева́ть", "plain": "одевать", "pos": "动词", "level": "A", "g": true, "meaning": "给某人穿衣服", "accepted_meanings": ["给某人穿衣服", "给……穿衣"], "aspect": {"impf": "одева́ть", "pf": "оде́ть"}, "accepted_active_answers": ["одевать", "одеть"], "government": [{"pattern": "одева́ть кого?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого"]}], "usage": ["одева́ть ребёнка"], "example": "Ма́ма одева́ет ребёнка.", "source": "示例词库", "sense_question": {"prompt": "“自己穿上外套”更适合用哪个动词？", "options": ["одева́ть", "надева́ть"], "answer": "надева́ть"}, "revision": 1, "active": true}, {"id": "XU-V-000006", "word": "похо́жий", "plain": "похожий", "pos": "形容词", "level": "R", "g": true, "meaning": "相像的；类似的", "accepted_meanings": ["相像的", "类似的", "相似的"], "aspect": null, "accepted_active_answers": [], "government": [{"pattern": "похо́жий на кого? на что?", "case": "винительный", "case_no": 4, "case_cn": "四格", "accepted_answers": ["винительный", "4", "4格", "四格", "кого", "что", "кого? что?"]}], "usage": ["похо́жий на ма́му", "э́ти слова́ похо́жи"], "example": "Он похо́ж на отца́.", "source": "示例词库", "sense_question": null, "revision": 1, "active": true}], "errors": [{"id": "XU-E-000001", "prompt": "Анна вчера ___ в театр.", "student_answer": "ходил", "correct_answer": "ходила", "accepted_answers": ["ходила"], "options": ["ходила", "ходил", "ходили", "ходило"], "explanation": "过去时需要和主语在性、数上保持一致；Анна 是阴性单数，所以用 ходила。", "tags": ["过去时", "性数一致"], "source": "示例错题", "revision": 1, "active": true}, {"id": "XU-E-000002", "prompt": "Мы едем ___ метро.", "student_answer": "в", "correct_answer": "на метро", "accepted_answers": ["на метро", "на"], "options": ["на", "в", "по", "к"], "explanation": "表示乘坐交通工具时常用 на + 前置格：на метро, на автобусе。", "tags": ["介词", "交通工具"], "source": "示例错题", "revision": 1, "active": true}, {"id": "XU-E-000003", "prompt": "Я горжусь ___ . (мой брат)", "student_answer": "мой брат", "correct_answer": "моим братом", "accepted_answers": ["моим братом"], "options": ["моим братом", "мой брат", "моего брата", "моему брату"], "explanation": "гордиться кем? чем? 要求工具格（五格）。", "tags": ["格支配", "五格"], "source": "示例错题", "revision": 1, "active": true}]};
 const STORAGE = {
   content:"xiaoxu_v2_content",
   progress:"xiaoxu_v2_progress",
@@ -974,27 +977,161 @@ function recordVocab(v,type,ok){
 function nextTest(){nextTestBtn.classList.add("hidden");loadNextTest()}
 
 function errorStatus(e){const p=ensureErrorProgress(e.id);if(p.status==="mastered")return"已掌握";if(p.nextReview<=now())return"待复习";return"巩固中"}
+
+function deriveBlankAnswer(e){
+ const prompt=String(e.prompt||"");
+ if(!prompt.includes("___")) return null;
+
+ // Text visibly following the blank, excluding parenthetical hints.
+ const after=prompt.split("___")[1]||"";
+ const visibleAfter=normalize(after.replace(/\([^)]*\)/g,""));
+ const correct=normalize(e.correct_answer||"");
+ if(!correct) return null;
+
+ // If the stored full answer redundantly contains text already visible after the blank,
+ // strip that visible tail. Example: "___ метро" + "на метро" -> "на".
+ if(visibleAfter && correct.endsWith(visibleAfter)){
+   const blank=correct.slice(0, correct.length-visibleAfter.length).trim();
+   if(blank) return blank;
+ }
+
+ return correct;
+}
+
+function errorAcceptedAnswers(e){
+ const vals=[e.correct_answer,...(e.accepted_answers||[])];
+ const blank=deriveBlankAnswer(e);
+ if(blank) vals.push(blank);
+ return [...new Set(vals.map(normalize).filter(Boolean))];
+}
+
+function errorDisplayAnswer(e){
+ return deriveBlankAnswer(e) || e.correct_answer || "";
+}
+
+function errorChoicePool(e){
+ // Prefer author-provided options/distractors in future error packs.
+ const provided=[
+   ...(e.options||[]),
+   ...(e.distractors||[])
+ ].filter(Boolean);
+
+ const correct=errorDisplayAnswer(e);
+ const correctNorm=normalize(correct);
+ const pool=[];
+ const seen=new Set([correctNorm]);
+
+ function add(x){
+   x=String(x||"").trim();
+   const n=normalize(x);
+   if(!x || !n || seen.has(n)) return;
+   // Avoid adding an alternative accepted correct answer as a distractor.
+   if(errorAcceptedAnswers(e).includes(n)) return;
+   pool.push(x);seen.add(n);
+ }
+
+ provided.forEach(add);
+ add(e.student_answer);
+
+ // Special fallback for common preposition blanks.
+ const prepSet=["в","во","на","по","к","ко","с","со","из","от","за","под","над","перед","у"];
+ if(prepSet.includes(normalize(correct))){
+   shuffleCopy(prepSet.filter(x=>normalize(x)!==correctNorm)).forEach(add);
+ }
+
+ // Generic legacy fallback: borrow old wrong answers first, not other correct answers.
+ activeErrors().forEach(x=>{ if(x.id!==e.id) add(x.student_answer); });
+
+ return pool;
+}
+
+function buildErrorOptions(e){
+ const correct=errorDisplayAnswer(e);
+ const distractors=errorChoicePool(e).slice(0,3);
+ const opts=[correct,...distractors];
+ // A legacy error may not have enough sensible distractors; 2–4 choices is preferable
+ // to inventing absurd answers merely to force four.
+ return shuffleCopy([...new Set(opts.filter(Boolean))]);
+}
+
+function renderErrorOptions(e){
+ errorOptions.innerHTML="";
+ const opts=buildErrorOptions(e);
+ opts.forEach(opt=>{
+   const b=document.createElement("button");
+   b.className="error-option";
+   b.textContent=opt;
+   b.onclick=()=>checkError(opt);
+   errorOptions.appendChild(b);
+ });
+}
 function startErrorReview(){
- goTab("errors");errorQueue=activeErrors().filter(e=>ensureErrorProgress(e.id).nextReview<=now()||ensureErrorProgress(e.id).needsReconfirm);
+ goTab("errors");
+ errorQueue=activeErrors().filter(e=>ensureErrorProgress(e.id).nextReview<=now()||ensureErrorProgress(e.id).needsReconfirm);
  errorReview.classList.remove("hidden");
- if(!errorQueue.length){errorQuestion.textContent="🎉 当前没有到期错题";errorMeta.textContent="";errorInput.classList.add("hidden");checkErrorBtn.classList.add("hidden");nextErrorBtn.classList.add("hidden");return}
- errorInput.classList.remove("hidden");checkErrorBtn.classList.remove("hidden");loadError();
+ if(!errorQueue.length){
+   errorQuestion.textContent="🎉 当前没有到期错题";
+   errorMeta.textContent="";
+   errorOptions.innerHTML="";
+   nextErrorBtn.classList.add("hidden");
+   return;
+ }
+ loadError();
 }
+
 function loadError(){
- errorFeedback.innerHTML="";nextErrorBtn.classList.add("hidden");checkErrorBtn.classList.remove("hidden");errorInput.disabled=false;errorInput.value="";errorInput.classList.remove("hidden");
+ errorFeedback.innerHTML="";
+ nextErrorBtn.classList.add("hidden");
  currentError=errorQueue.shift();
- if(!currentError){errorQuestion.textContent="🎉 本轮错题复习完成";errorMeta.textContent="";errorInput.classList.add("hidden");checkErrorBtn.classList.add("hidden");saveProgress();renderAll();return}
- errorQuestion.textContent=currentError.prompt;errorMeta.textContent=`${(currentError.tags||[]).join(" / ")} · ${currentError.source||""}`;errorInput.focus();
+ if(!currentError){
+   errorQuestion.textContent="🎉 本轮错题复习完成";
+   errorMeta.textContent="";
+   errorOptions.innerHTML="";
+   saveProgress();renderAll();return;
+ }
+ errorQuestion.textContent=currentError.prompt;
+ errorMeta.textContent=`${(currentError.tags||[]).join(" / ")} · ${currentError.source||""}`;
+ renderErrorOptions(currentError);
 }
-errorInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!errorInput.disabled)checkError()});
-function checkError(){
- const e=currentError,p=ensureErrorProgress(e.id),ok=matchesAny(errorInput.value,[e.correct_answer,...(e.accepted_answers||[])]);
+
+function checkError(raw){
+ const e=currentError,p=ensureErrorProgress(e.id);
+ const ok=errorAcceptedAnswers(e).includes(normalize(raw));
  p.recent=(p.recent||[]).slice(-9);p.recent.push(ok?1:0);
- if(ok){p.correct++;p.stage=Math.min(p.stage+1,ERROR_INTERVALS.length-1);p.nextReview=now()+ERROR_INTERVALS[p.stage];p.status=p.stage>=3?"mastered":"learning";p.needsReconfirm=false}
- else{p.wrong++;p.stage=0;p.nextReview=now()+10*60e3;p.status="due";if(!e._retry){e._retry=true;errorQueue.splice(Math.min(2,errorQueue.length),0,e)}}
- errorInput.disabled=true;errorFeedback.innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"✅ 正确":"❌ 这次不对"}<br><b>正确答案：</b>${esc(e.correct_answer)}<br><b>当时答案：</b>${esc(e.student_answer)}<br><span class="small">${esc(e.explanation)}</span></div>`;
- checkErrorBtn.classList.add("hidden");nextErrorBtn.classList.remove("hidden");saveProgress();renderAll();
+
+ if(ok){
+   p.correct++;
+   p.stage=Math.min(p.stage+1,ERROR_INTERVALS.length-1);
+   p.nextReview=now()+ERROR_INTERVALS[p.stage];
+   p.status=p.stage>=3?"mastered":"learning";
+   p.needsReconfirm=false;
+ }else{
+   p.wrong++;
+   p.stage=0;
+   p.nextReview=now()+10*60e3;
+   p.status="due";
+   if(!e._retry){
+     e._retry=true;
+     errorQueue.splice(Math.min(2,errorQueue.length),0,e);
+   }
+ }
+
+ [...errorOptions.children].forEach(b=>{
+   b.disabled=true;
+   if(normalize(b.textContent)===normalize(errorDisplayAnswer(e))) b.style.borderColor="var(--good)";
+   if(normalize(b.textContent)===normalize(raw) && !ok) b.style.borderColor="var(--bad)";
+ });
+
+ errorFeedback.innerHTML=`<div class="feedback ${ok?"good":"bad"}">
+   ${ok?"✅ 正确":"❌ 这次不对"}<br>
+   <b>正确答案：</b>${esc(errorDisplayAnswer(e))}<br>
+   ${e.student_answer?`<b>原错答案：</b>${esc(e.student_answer)}<br>`:""}
+   <span class="small">${esc(e.explanation||"")}</span>
+ </div>`;
+ nextErrorBtn.classList.remove("hidden");
+ saveProgress();renderAll();
 }
+
 function nextError(){loadError()}
 
 function toggleLibrary(which){
