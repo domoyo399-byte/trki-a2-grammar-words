@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.9.1</title>
+<title>小许 A2 学习系统 v2.9.2</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -314,7 +314,10 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
 
             <div class="test-card-answer">
               <div id="testOptions" class="option-list hidden"></div>
-              <input id="testInput" class="answer-input" placeholder="输入答案后按 Enter">
+              <form id="testAnswerForm" autocomplete="off">
+                <input id="testInput" class="answer-input" placeholder="输入答案后按回车" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false">
+                <button type="submit" class="hidden" aria-hidden="true" tabindex="-1">提交</button>
+              </form>
               <div id="testFeedback"></div>
             </div>
           </div>
@@ -1103,15 +1106,6 @@ function renderTestItem(){
  }
 }
 
-testInput.addEventListener("keydown",e=>{
- if(e.key==="Enter"&&!testInput.disabled){
-   e.preventDefault();
-   const raw=testInput.value.trim();
-   if(!raw)return;
-   testInput.blur();
-   checkTest(raw);
- }
-});
 
 testInput.addEventListener("focus",()=>{
  if(window.innerWidth<=720){
@@ -1120,10 +1114,31 @@ testInput.addEventListener("focus",()=>{
  }
 });
 
+testAnswerForm.addEventListener("submit",e=>{
+ e.preventDefault();
+ if(testInput.disabled || testInput.classList.contains("hidden")) return;
+ const raw=testInput.value.trim();
+ if(!raw) return;
+ testInput.blur();
+ checkTest(raw);
+});
+
+testInput.addEventListener("keyup",e=>{
+ if((e.key==="Enter" || e.keyCode===13) && !testInput.disabled){
+   const raw=testInput.value.trim();
+   if(!raw) return;
+   if(document.activeElement===testInput){
+     testInput.blur();
+     checkTest(raw);
+   }
+ }
+});
+
 function checkTest(raw){
  if(testIndex<0||testIndex>=testItems.length)return;
  const item=testItems[testIndex];
  if(item.answered)return;
+ item.answered=true; // lock immediately to prevent duplicate mobile events
 
  const v=content.vocabulary.find(x=>x.id===item.task.vocabId);
  let ok=false,ans="";
@@ -1151,7 +1166,6 @@ function checkTest(raw){
 
  recordVocab(v,item.task.type,ok);
 
- item.answered=true;
  item.raw=String(raw??"");
  item.ok=ok;
  item.ans=ans;
