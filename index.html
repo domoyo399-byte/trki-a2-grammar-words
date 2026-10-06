@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.9.5</title>
+<title>小许 A2 学习系统 v2.10</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -151,6 +151,22 @@ h1{margin:0;font-size:24px}.sub{font-size:13px;color:var(--muted);margin-top:4px
 }
 .test-plan-pill b{color:var(--text);font-size:14px}
 .test-word-panel{margin-top:14px}
+.compact-test-setup{padding-bottom:8px}
+.test-detail-toggle{
+ width:100%;
+ display:flex;
+ align-items:center;
+ gap:7px;
+ border:0;
+ background:transparent;
+ color:var(--text);
+ padding:9px 2px 2px;
+ margin-top:4px;
+ text-align:left;
+ font-weight:650;
+}
+.test-detail-toggle .small{margin-left:auto;font-weight:400}
+#testDetailBody{padding-top:5px}
 .answer-input{width:100%;border:1px solid #cbd3df;border-radius:10px;padding:12px 13px}
 .submit-answer-row{display:flex;justify-content:center;margin-top:12px}
 #submitAnswerBtn{min-width:128px}
@@ -287,20 +303,29 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
     </div>
 
     <div id="testMode" class="hidden">
-      <div class="session-box">
+      <div class="session-box compact-test-setup">
         <div class="session-row">
           <span class="session-label">今天测试的新词：</span>
           <button class="session-choice active" data-test-size="10" onclick="setTestSize(10)">10 个</button>
           <button class="session-choice" data-test-size="20" onclick="setTestSize(20)">20 个</button>
           <button class="session-choice" data-test-size="30" onclick="setTestSize(30)">30 个</button>
         </div>
-        <div class="session-hint" id="testSessionHint">A 类：中文→输入俄语；R 类：俄语→中文四选一。G 与词义辨析仍单独测试。</div>
-        <div class="test-plan-compact">
-          <span class="test-plan-pill">单词 <b id="testPlanTotalWords">0</b></span>
-          <span class="test-plan-pill">题目 <b id="testPlanTotalTasks">0</b></span>
-          <span class="test-plan-pill">今日新词 <b id="testPlanNewWords">0</b></span>
-          <span class="test-plan-pill">到期旧词 <b id="testPlanDueWords">0</b></span>
-          <span class="test-plan-pill">薄弱词 <b id="testPlanWeakWords">0</b></span>
+
+        <button class="test-detail-toggle" onclick="toggleTestDetails()">
+          <span id="testDetailArrow">▸</span>
+          <span id="testDetailTitle">本轮详情</span>
+          <span class="small" id="testDetailSummary"></span>
+        </button>
+
+        <div id="testDetailBody" class="hidden">
+          <div class="session-hint" id="testSessionHint">A 类：中文→输入俄语；R 类：俄语→中文四选一。G 与词义辨析仍单独测试。</div>
+          <div class="test-plan-compact">
+            <span class="test-plan-pill">单词 <b id="testPlanTotalWords">0</b></span>
+            <span class="test-plan-pill">题目 <b id="testPlanTotalTasks">0</b></span>
+            <span class="test-plan-pill">今日新词 <b id="testPlanNewWords">0</b></span>
+            <span class="test-plan-pill">到期旧词 <b id="testPlanDueWords">0</b></span>
+            <span class="test-plan-pill">薄弱词 <b id="testPlanWeakWords">0</b></span>
+          </div>
         </div>
       </div>
 
@@ -444,7 +469,7 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
     <input id="fileInput" type="file" accept=".json" class="hidden">
   </div>
   <div class="footer-note">导入前会自动备份；更新词条内容不会覆盖既有学习进度。为避免长期占空间，只保留最近 5 份自动备份。</div>
-  <div class="version-note">版本 v2.9.5</div>
+  <div class="version-note">版本 v2.10</div>
 </div>
 </div>
 
@@ -531,6 +556,21 @@ function setStudySize(n){
  document.querySelectorAll("[data-study-size]").forEach(b=>b.classList.toggle("active",Number(b.dataset.studySize)===n));
  document.getElementById("studySessionHint").textContent=`本轮将抽取最多 ${n} 个尚未首次学习的新词。`;
 }
+function toggleTestDetails(){
+ const body=document.getElementById("testDetailBody");
+ const arrow=document.getElementById("testDetailArrow");
+ const show=body.classList.contains("hidden");
+ body.classList.toggle("hidden",!show);
+ arrow.textContent=show?"▾":"▸";
+}
+
+function updateTestDetailSummary(){
+ const plan=currentTestPlan||computeTestPlan();
+ const el=document.getElementById("testDetailSummary");
+ if(!el)return;
+ el.textContent=`${plan.allWords.length}词 · ${testItems.length||plan.totalTasks}题`;
+}
+
 function setTestSize(n){
  testNewWordLimit=n;
  if(!testItems.length || testIndex>=testItems.length){
@@ -616,6 +656,7 @@ function renderTestPlan(plan=null){
  renderWordChips("testNewWordList",p.selectedNew,false);
  renderWordChips("testDueWordList",p.dueOld,false);
  renderWordChips("testWeakWordList",p.weakWords,true);
+ updateTestDetailSummary();
 }
 
 function toggleTestWordList(){
@@ -1112,6 +1153,7 @@ function renderTestItem(){
  nextTestBtn.classList.toggle("hidden",!item.answered);
  nextTestBtn.textContent=testIndex===testItems.length-1?"完成本轮":"下一题";
  testPlanTotalTasks.textContent=testItems.length;
+ updateTestDetailSummary();
 
  if(!item.answered && !testInput.classList.contains("hidden") && window.innerWidth>720){
    setTimeout(()=>testInput.focus(),30);
@@ -1119,14 +1161,26 @@ function renderTestItem(){
 }
 
 
-testInput.addEventListener("focus",()=>{
- if(window.innerWidth<=720){
-   const card=document.querySelector(".test-flashcard");
-   if(card)setTimeout(()=>card.scrollIntoView({block:"start",behavior:"smooth"}),120);
- }
-});
-
 let testSubmitLock=false;
+
+function keepTestCardStill(fn){
+ const card=document.querySelector(".test-flashcard");
+ const beforeTop=card?card.getBoundingClientRect().top:null;
+
+ fn();
+
+ if(!card || beforeTop===null)return;
+
+ const restore=()=>{
+   const nowTop=card.getBoundingClientRect().top;
+   const delta=nowTop-beforeTop;
+   if(Math.abs(delta)>1)window.scrollBy(0,delta);
+ };
+
+ requestAnimationFrame(restore);
+ setTimeout(restore,80);
+ setTimeout(restore,220);
+}
 
 function submitTypedAnswer(){
  const input=document.getElementById("testInput");
@@ -1135,9 +1189,9 @@ function submitTypedAnswer(){
  if(!raw) return;
  if(testSubmitLock) return;
  testSubmitLock=true;
- input.blur();
+
  try{
-   checkTest(raw);
+   keepTestCardStill(()=>checkTest(raw));
  }catch(err){
    console.error(err);
    testFeedback.innerHTML=`<div class="feedback bad">
@@ -1199,16 +1253,10 @@ function checkTest(raw){
    testItems.splice(insertAt,0,retry);
  }
 
- if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
  saveProgress();
  renderAll();
  renderTestItem();
- setTimeout(()=>{
-   const result=document.getElementById("testFeedback");
-   if(result && result.innerHTML){
-     result.scrollIntoView({block:"center",behavior:"smooth"});
-   }
- },120);
+ updateTestDetailSummary();
 }
 
 
