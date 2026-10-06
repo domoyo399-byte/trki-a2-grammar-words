@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.9.3</title>
+<title>小许 A2 学习系统 v2.9.4</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -152,16 +152,8 @@ h1{margin:0;font-size:24px}.sub{font-size:13px;color:var(--muted);margin-top:4px
 .test-plan-pill b{color:var(--text);font-size:14px}
 .test-word-panel{margin-top:14px}
 .answer-input{width:100%;border:1px solid #cbd3df;border-radius:10px;padding:12px 13px}
-.test-submit-sentinel{
- position:absolute;
- width:1px;height:1px;
- padding:0;margin:-1px;
- overflow:hidden;
- clip:rect(0,0,0,0);
- white-space:nowrap;
- border:0;
- opacity:0;
-}
+.submit-answer-row{display:flex;justify-content:center;margin-top:12px}
+#submitAnswerBtn{min-width:128px}
 .version-note{text-align:center;font-size:11px;color:var(--muted);margin-top:10px}
 .feedback{padding:14px;border-radius:12px;margin-top:10px;line-height:1.6}.feedback.good{background:var(--good-bg);color:var(--good)}.feedback.bad{background:var(--bad-bg);color:var(--bad)}
 .result-title{font-size:22px;font-weight:760;margin-bottom:8px}
@@ -325,10 +317,12 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
 
             <div class="test-card-answer">
               <div id="testOptions" class="option-list hidden"></div>
-              <form id="testAnswerForm" autocomplete="off" onsubmit="return submitTestAnswer(event)">
-                <input id="testInput" class="answer-input" placeholder="输入答案后按回车" enterkeyhint="go" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="return handleTestInputKeydown(event)">
-                <button type="submit" class="test-submit-sentinel" tabindex="-1" aria-label="提交答案">提交</button>
-              </form>
+              <div id="testAnswerForm">
+                <input id="testInput" class="answer-input" placeholder="输入答案" autocomplete="off" autocapitalize="off" spellcheck="false">
+                <div class="submit-answer-row">
+                  <button type="button" class="btn primary" id="submitAnswerBtn" onclick="submitTypedAnswer()">提交答案</button>
+                </div>
+              </div>
               <div id="testFeedback"></div>
             </div>
           </div>
@@ -450,7 +444,7 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
     <input id="fileInput" type="file" accept=".json" class="hidden">
   </div>
   <div class="footer-note">导入前会自动备份；更新词条内容不会覆盖既有学习进度。为避免长期占空间，只保留最近 5 份自动备份。</div>
-  <div class="version-note">版本 v2.9.3</div>
+  <div class="version-note">版本 v2.9.4</div>
 </div>
 </div>
 
@@ -1047,6 +1041,7 @@ function renderTestItem(){
  testInput.classList.remove("hidden");
  testInput.disabled=false;
  testInput.value="";
+ submitAnswerBtn.classList.remove("hidden");
 
  // Completion screen. Previous still works for reviewing the last question.
  if(testIndex>=testItems.length){
@@ -1056,6 +1051,7 @@ function renderTestItem(){
    testProgress.textContent=`${testItems.length} / ${testItems.length}`;
    testBadges.innerHTML='<span class="test-origin-badge new">已完成</span>';
    testInput.classList.add("hidden");
+   submitAnswerBtn.classList.add("hidden");
    testOptions.classList.add("hidden");
    prevTestBtn.classList.toggle("hidden",testItems.length===0);
    nextTestBtn.classList.add("hidden");
@@ -1075,6 +1071,7 @@ function renderTestItem(){
  if(currentTest.type==="R_ZH"){
    testQuestion.textContent=v.word;
    testInput.classList.add("hidden");
+   submitAnswerBtn.classList.add("hidden");
    renderChoiceButtons(item,v);
  }
 
@@ -1085,6 +1082,7 @@ function renderTestItem(){
      testInput.value=item.raw;
      testInput.disabled=true;
      testInput.classList.add("hidden");
+     submitAnswerBtn.classList.add("hidden");
    }
  }
 
@@ -1096,12 +1094,14 @@ function renderTestItem(){
      testInput.value=item.raw;
      testInput.disabled=true;
      testInput.classList.add("hidden");
+     submitAnswerBtn.classList.add("hidden");
    }
  }
 
  if(currentTest.type==="SENSE"){
    testQuestion.textContent=v.sense_question.prompt;
    testInput.classList.add("hidden");
+   submitAnswerBtn.classList.add("hidden");
    renderChoiceButtons(item,v);
  }
 
@@ -1113,7 +1113,7 @@ function renderTestItem(){
  nextTestBtn.textContent=testIndex===testItems.length-1?"完成本轮":"下一题";
  testPlanTotalTasks.textContent=testItems.length;
 
- if(!item.answered && !testInput.classList.contains("hidden")){
+ if(!item.answered && !testInput.classList.contains("hidden") && window.innerWidth>720){
    setTimeout(()=>testInput.focus(),30);
  }
 }
@@ -1128,44 +1128,20 @@ testInput.addEventListener("focus",()=>{
 
 let testSubmitLock=false;
 
-function submitCurrentTestInput(){
+function submitTypedAnswer(){
  const input=document.getElementById("testInput");
- if(!input || input.disabled || input.classList.contains("hidden")) return false;
+ if(!input || input.disabled || input.classList.contains("hidden")) return;
  const raw=input.value.trim();
- if(!raw) return false;
- if(testSubmitLock) return false;
+ if(!raw) return;
+ if(testSubmitLock) return;
  testSubmitLock=true;
  input.blur();
  try{
    checkTest(raw);
  }finally{
-   setTimeout(()=>{testSubmitLock=false},80);
+   setTimeout(()=>{testSubmitLock=false},120);
  }
- return true;
 }
-
-function submitTestAnswer(e){
- if(e && e.preventDefault) e.preventDefault();
- submitCurrentTestInput();
- return false;
-}
-
-function handleTestInputKeydown(e){
- const isEnter=e && (e.key==="Enter" || e.keyCode===13 || e.which===13);
- if(!isEnter) return true;
- if(e.preventDefault) e.preventDefault();
- if(e.stopPropagation) e.stopPropagation();
- submitCurrentTestInput();
- return false;
-}
-
-// Additional mobile fallback: some iOS input methods emit keyup differently.
-document.getElementById("testInput").addEventListener("keyup",e=>{
- if(e.key==="Enter" || e.keyCode===13 || e.which===13){
-   if(e.preventDefault)e.preventDefault();
-   submitCurrentTestInput();
- }
-});
 
 function checkTest(raw){
  if(testIndex<0||testIndex>=testItems.length)return;
