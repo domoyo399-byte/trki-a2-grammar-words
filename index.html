@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.8</title>
+<title>小许 A2 学习系统 v2.9</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -315,7 +315,8 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
             </div>
           </div>
 
-          <div class="test-card-actions">
+          <div class="test-card-actions" style="gap:10px;flex-wrap:wrap">
+            <button class="btn hidden" id="prevTestBtn" onclick="prevTest()">← 上一题</button>
             <button class="btn primary" id="startTestBtn" onclick="startTest()">开始测试</button>
             <button class="btn soft hidden" id="nextTestBtn" onclick="nextTest()">下一题</button>
           </div>
@@ -451,7 +452,7 @@ let content=loadContent();
 let progress=loadProgress();
 let studyIndex=0, studyList=[], studyFlipped=false;
 let studyBatchSize=10, testNewWordLimit=10, studyRoundIds=[], studyRoundCompleted=false;
-let testQueue=[], currentTest=null, currentTestPlan=null, testTotalAtStart=0, testDoneCount=0;
+let testItems=[], testIndex=-1, currentTest=null, currentTestPlan=null;
 let errorQueue=[], currentError=null;
 
 function clone(x){return JSON.parse(JSON.stringify(x))}
@@ -519,7 +520,9 @@ function setStudySize(n){
 }
 function setTestSize(n){
  testNewWordLimit=n;
- currentTestPlan=null;
+ if(!testItems.length || testIndex>=testItems.length){
+   currentTestPlan=null;
+ }
  document.querySelectorAll("[data-test-size]").forEach(b=>b.classList.toggle("active",Number(b.dataset.testSize)===n));
  const eligible=activeVocab().filter(v=>{const p=ensureVocabProgress(v.id);return p.learned&&p.learnedDay===localDayKey()}).length;
  document.getElementById("testSessionHint").textContent=`今天已完成首次学习 ${eligible} 个；本轮最多抽取 ${n} 个新词。A 类输入俄语，R 类中文四选一；旧词到期复习另行加入。`;
@@ -733,9 +736,12 @@ function showVocabMode(m){
    document.querySelectorAll("[data-test-size]").forEach(b=>b.classList.toggle("active",Number(b.dataset.testSize)===testNewWordLimit));
    if(currentTestPlan) renderTestPlan(currentTestPlan);
    else renderTestPlan();
-   if(!currentTest){
+   if(testItems.length && testIndex>=0){
+     renderTestItem();
+   }else if(!currentTest){
      testProgress.textContent="准备开始";
      testBadges.innerHTML="";
+     prevTestBtn.classList.add("hidden");
    }
  }
 }
@@ -746,6 +752,49 @@ function acceptedActive(v){
  if(v.word)vals.add(normalize(v.word));
  if(v.aspect){if(v.aspect.impf)vals.add(normalize(v.aspect.impf));if(v.aspect.pf)vals.add(normalize(v.aspect.pf))}
  return [...vals];
+}
+
+function displayActiveAnswers(v){
+ const out=[];
+ const seen=new Set();
+ const add=s=>{
+   if(!s)return;
+   const key=normalize(s);
+   if(!key||seen.has(key))return;
+   seen.add(key);out.push(s);
+ };
+ if(v.aspect){
+   add(v.aspect.impf);
+   add(v.aspect.pf);
+ }
+ if(!out.length)add(v.word);
+ return out;
+}
+
+function displaySenseAnswer(v){
+ const raw=v.sense_question?.answer||"";
+ const found=(v.sense_question?.options||[]).find(x=>normalize(x)===normalize(raw));
+ return found||raw;
+}
+
+function stressedCaseName(caseNo,fallback=""){
+ const map={
+   1:"имени́тельный",
+   2:"роди́тельный",
+   3:"да́тельный",
+   4:"вини́тельный",
+   5:"твори́тельный",
+   6:"предло́жный"
+ };
+ return map[Number(caseNo)]||fallback;
+}
+
+function stressedGovernmentPattern(s){
+ return String(s||"")
+   .replace(/\bкого\?/g,"кого́?")
+   .replace(/\bчего\?/g,"чего́?")
+   .replace(/\bкому\?/g,"кому́?")
+   .replace(/\bчему\?/g,"чему́?");
 }
 function acceptedMeanings(v){
  return [...new Set([v.meaning,...(v.accepted_meanings||[])].map(normalize).filter(Boolean))]
@@ -853,153 +902,291 @@ function taskTypeLabel(t){
 function renderCurrentTestMeta(v){
  const origin=taskOrigin(v);
  const type=taskTypeLabel(currentTest.type);
- const current=Math.min(testDoneCount+1,testTotalAtStart||1);
- testProgress.textContent=`${current} / ${testTotalAtStart||1}`;
+ const total=Math.max(testItems.length,1);
+ const current=Math.min(testIndex+1,total);
+ testProgress.textContent=`${current} / ${total}`;
  testBadges.innerHTML=
    (origin.label?`<span class="test-origin-badge ${origin.cls}">${origin.label}</span>`:"")+
    `<span class="test-origin-badge type">${type}</span>`;
 }
+
+function matchesAny(raw,arr){
+ const x=normalize(raw);
+ return arr.some(a=>{
+   const y=normalize(a);
+   return x===y || (/[一-龥]/.test(x)&&x.length>0&&(y.includes(x)||x.includes(y)));
+ });
+}
+function stripGovernmentPrepositions(s){
+ const preps=new Set(["в","во","на","за","с","со","о","об","обо","к","ко","от","до","из","изо","у","для","без","после","перед","под","над","между","через","про","по","при"]);
+ return normalize(s).split(" ").filter(t=>t&&!preps.has(t)).join(" ");
+}
+function governmentCasePair(caseNo){
+ const pairs={1:["кто что"],2:["кого чего"],3:["кому чему"],4:["кого что"],5:["кем чем"],6:["ком чем"]};
+ return pairs[caseNo]||[];
+}
+function governmentMatches(raw,g){
+ if(matchesAny(raw,g.accepted_answers||[]))return true;
+ const x=stripGovernmentPrepositions(raw);
+ const accepted=(g.accepted_answers||[]).map(stripGovernmentPrepositions);
+ if(accepted.includes(x))return true;
+ return governmentCasePair(Number(g.case_no)).includes(x);
+}
+function governmentAnswerLabel(g){
+ const caseLabel=[g.case_cn,stressedCaseName(g.case_no,g.case)].filter(Boolean).join(" / ");
+ const pattern=stressedGovernmentPattern(g.pattern||"");
+ return `${caseLabel}${pattern?`；结构：${pattern}`:""}`;
+}
+
 function startTest(){
- const eligible=activeVocab().filter(v=>{const p=ensureVocabProgress(v.id);return p.learned&&p.learnedDay===localDayKey()}).length;
+ const eligible=activeVocab().filter(v=>{
+   const p=ensureVocabProgress(v.id);
+   return p.learned&&p.learnedDay===localDayKey();
+ }).length;
+
  currentTestPlan=computeTestPlan();
  renderTestPlan(currentTestPlan);
+
  document.getElementById("testSessionHint").textContent=eligible<testNewWordLimit
    ? `今天只完成了 ${eligible} 个新词的首次学习，因此本轮新词最多测试 ${eligible} 个；不会加入未学习词。`
    : `本轮已固定：${currentTestPlan.allWords.length} 个不同单词，预计 ${currentTestPlan.totalTasks} 道题。`;
- testQueue=buildTestQueue(currentTestPlan);
- testTotalAtStart=testQueue.length;
- testDoneCount=0;
- testProgress.textContent=testTotalAtStart?`1 / ${testTotalAtStart}`:"0 / 0";
- testBadges.innerHTML="";
- startTestBtn.classList.add("hidden");nextTestBtn.classList.add("hidden");
- if(!testQueue.length){testQuestion.textContent="还没有可测试内容。先完成新词首次学习，或等待旧词复习到期。";startTestBtn.classList.remove("hidden");return}
- loadNextTest();
-}
-function loadNextTest(){
- testFeedback.innerHTML="";testOptions.innerHTML="";testOptions.classList.add("hidden");testInput.classList.remove("hidden");testInput.disabled=false;testInput.value="";
- currentTest=testQueue.shift();
- if(!currentTest){
-   testType.textContent="";
-   testQuestion.textContent="🎉 本轮测试完成";
-   testProgress.textContent=`${testTotalAtStart} / ${testTotalAtStart}`;
-   testBadges.innerHTML='<span class="test-origin-badge new">已完成</span>';
-   testInput.classList.add("hidden");
+
+ const tasks=buildTestQueue(currentTestPlan);
+ testItems=tasks.map(task=>({
+   task,
+   answered:false,
+   raw:"",
+   ok:null,
+   ans:"",
+   options:null
+ }));
+ testIndex=0;
+ currentTest=null;
+
+ startTestBtn.classList.add("hidden");
+ if(!testItems.length){
+   testQuestion.textContent="还没有可测试内容。先完成新词首次学习，或等待旧词复习到期。";
+   testProgress.textContent="0 / 0";
+   prevTestBtn.classList.add("hidden");
+   nextTestBtn.classList.add("hidden");
    startTestBtn.classList.remove("hidden");
-   startTestBtn.textContent="再来一轮";
-   renderAll();
    return;
  }
+ renderTestItem();
+}
+
+function taskCorrectOption(v,type){
+ if(type==="R_ZH") return primaryMeaning(v);
+ if(type==="SENSE") return displaySenseAnswer(v);
+ return "";
+}
+
+function renderChoiceButtons(item,v){
+ testOptions.innerHTML="";
+ testOptions.classList.remove("hidden");
+
+ if(!item.options){
+   if(item.task.type==="R_ZH") item.options=buildRecognitionOptions(v);
+   else if(item.task.type==="SENSE") item.options=[...(v.sense_question?.options||[])];
+   else item.options=[];
+ }
+
+ const correct=taskCorrectOption(v,item.task.type);
+
+ item.options.forEach(opt=>{
+   const b=document.createElement("button");
+   b.className="option";
+   b.textContent=opt;
+
+   if(item.answered){
+     b.disabled=true;
+     if(normalize(opt)===normalize(correct)) b.style.borderColor="var(--good)";
+     if(normalize(opt)===normalize(item.raw) && !item.ok) b.style.borderColor="var(--bad)";
+   }else{
+     b.onclick=()=>checkTest(opt);
+   }
+   testOptions.appendChild(b);
+ });
+}
+
+function renderTestFeedback(item){
+ if(!item.answered){
+   testFeedback.innerHTML="";
+   return;
+ }
+ testFeedback.innerHTML=`<div class="feedback ${item.ok?"good":"bad"}">
+   ${item.ok?"✅ 正确":"❌ 这次不对"}<br>
+   <span class="small">标准答案：${esc(item.ans)}</span>
+ </div>`;
+}
+
+function renderTestItem(){
+ testFeedback.innerHTML="";
+ testOptions.innerHTML="";
+ testOptions.classList.add("hidden");
+ testInput.classList.remove("hidden");
+ testInput.disabled=false;
+ testInput.value="";
+
+ // Completion screen. Previous still works for reviewing the last question.
+ if(testIndex>=testItems.length){
+   currentTest=null;
+   testType.textContent="";
+   testQuestion.textContent="🎉 本轮测试完成";
+   testProgress.textContent=`${testItems.length} / ${testItems.length}`;
+   testBadges.innerHTML='<span class="test-origin-badge new">已完成</span>';
+   testInput.classList.add("hidden");
+   testOptions.classList.add("hidden");
+   prevTestBtn.classList.toggle("hidden",testItems.length===0);
+   nextTestBtn.classList.add("hidden");
+   startTestBtn.classList.remove("hidden");
+   startTestBtn.textContent="再来一轮";
+   testPlanTotalTasks.textContent=testItems.length;
+   return;
+ }
+
+ const item=testItems[testIndex];
+ currentTest=item.task;
  const v=content.vocabulary.find(x=>x.id===currentTest.vocabId);
+
  renderCurrentTestMeta(v);
+ testType.textContent=taskTypeLabel(currentTest.type);
+
  if(currentTest.type==="R_ZH"){
-   testType.textContent="R · 识别词 · 俄 → 中";
    testQuestion.textContent=v.word;
    testInput.classList.add("hidden");
-   testOptions.classList.remove("hidden");
-   buildRecognitionOptions(v).forEach(opt=>{
-     const b=document.createElement("button");
-     b.className="option";
-     b.textContent=opt;
-     b.onclick=()=>checkTest(opt);
-     testOptions.appendChild(b);
-   });
+   renderChoiceButtons(item,v);
  }
- if(currentTest.type==="A_RU"){testType.textContent="A · 中 → 俄";testQuestion.textContent=v.meaning;testInput.placeholder="未完成体或完成体均可；不要求输入重音"}
+
+ if(currentTest.type==="A_RU"){
+   testQuestion.textContent=v.meaning;
+   testInput.placeholder="输入俄语；不要求输入重音";
+   if(item.answered){
+     testInput.value=item.raw;
+     testInput.disabled=true;
+   }
+ }
+
  if(currentTest.type==="G"){
    const g=v.government[currentTest.govIndex];
-   testType.textContent="G · 格支配";
-   testQuestion.textContent=`${v.word}：${g.pattern} —— 要求第几格？`;
-   testInput.placeholder=`可答：${g.case_cn||"格"} / ${g.case||""} / 格问词或完整结构`;
+   testQuestion.textContent=`${v.word}：${stressedGovernmentPattern(g.pattern)} —— 要求第几格？`;
+   testInput.placeholder=`可答：${g.case_cn||"格"} / ${stressedCaseName(g.case_no,g.case)} / 格问词或完整结构`;
+   if(item.answered){
+     testInput.value=item.raw;
+     testInput.disabled=true;
+   }
+ }
+
+ if(currentTest.type==="SENSE"){
+   testQuestion.textContent=v.sense_question.prompt;
+   testInput.classList.add("hidden");
+   renderChoiceButtons(item,v);
+ }
+
+ renderTestFeedback(item);
+
+ prevTestBtn.classList.toggle("hidden",testIndex<=0);
+ startTestBtn.classList.add("hidden");
+ nextTestBtn.classList.toggle("hidden",!item.answered);
+ nextTestBtn.textContent=testIndex===testItems.length-1?"完成本轮":"下一题";
+ testPlanTotalTasks.textContent=testItems.length;
+
+ if(!item.answered && !testInput.classList.contains("hidden")){
+   setTimeout(()=>testInput.focus(),30);
+ }
 }
- if(currentTest.type==="SENSE"){testType.textContent="词义辨析";testQuestion.textContent=v.sense_question.prompt;testInput.classList.add("hidden");testOptions.classList.remove("hidden");v.sense_question.options.forEach(o=>{const b=document.createElement("button");b.className="option";b.textContent=o;b.onclick=()=>checkTest(o);testOptions.appendChild(b)})}
- setTimeout(()=>{if(!testInput.classList.contains("hidden"))testInput.focus()},30);
-}
-testInput.addEventListener("keydown",e=>{if(e.key==="Enter"&&!testInput.disabled)checkTest(testInput.value)});
+
+testInput.addEventListener("keydown",e=>{
+ if(e.key==="Enter"&&!testInput.disabled)checkTest(testInput.value);
+});
+
 testInput.addEventListener("focus",()=>{
  if(window.innerWidth<=720){
    const card=document.querySelector(".test-flashcard");
-   if(card){
-     setTimeout(()=>card.scrollIntoView({block:"start",behavior:"smooth"}),120);
-   }
+   if(card)setTimeout(()=>card.scrollIntoView({block:"start",behavior:"smooth"}),120);
  }
 });
-function matchesAny(raw,arr){
- const x=normalize(raw);return arr.some(a=>{const y=normalize(a);return x===y || (/[一-龥]/.test(x)&&x.length>0&&(y.includes(x)||x.includes(y)))})
-}
 
-function stripGovernmentPrepositions(s){
- const preps=new Set([
-   "в","во","на","за","с","со","о","об","обо","к","ко","от","до","из","изо","у",
-   "для","без","после","перед","под","над","между","через","про","по","при"
- ]);
- return normalize(s).split(" ").filter(t=>t && !preps.has(t)).join(" ");
-}
-
-function governmentCasePair(caseNo){
- const pairs={
-   1:["кто что"],
-   2:["кого чего"],
-   3:["кому чему"],
-   4:["кого что"],
-   5:["кем чем"],
-   6:["ком чем"]
- };
- return pairs[caseNo]||[];
-}
-
-function governmentMatches(raw,g){
- // Existing labels/numbers remain valid.
- if(matchesAny(raw,g.accepted_answers||[])) return true;
-
- // For a case-government question, prepositions are part of the lexical structure,
- // but they should not make an otherwise correct case answer fail.
- const x=stripGovernmentPrepositions(raw);
- const accepted=(g.accepted_answers||[]).map(stripGovernmentPrepositions);
- if(accepted.includes(x)) return true;
-
- // Accept the normal paired case questions, e.g. кого? что?,
- // regardless of whether the learner writes the governing preposition(s).
- const pairs=governmentCasePair(Number(g.case_no));
- if(pairs.includes(x)) return true;
-
- return false;
-}
-
-function governmentAnswerLabel(g){
- const caseLabel=[g.case_cn,g.case].filter(Boolean).join(" / ");
- return `${caseLabel}${g.pattern?`；结构：${g.pattern}`:""}`;
-}
 function checkTest(raw){
- const v=content.vocabulary.find(x=>x.id===currentTest.vocabId);let ok=false,ans="";
- if(currentTest.type==="R_ZH"){
+ if(testIndex<0||testIndex>=testItems.length)return;
+ const item=testItems[testIndex];
+ if(item.answered)return;
+
+ const v=content.vocabulary.find(x=>x.id===item.task.vocabId);
+ let ok=false,ans="";
+
+ if(item.task.type==="R_ZH"){
    ok=acceptedMeanings(v).includes(normalize(raw));
    ans=primaryMeaning(v);
  }
- if(currentTest.type==="A_RU"){ok=acceptedActive(v).includes(normalize(raw));ans=acceptedActive(v).join(" / ")}
- if(currentTest.type==="G"){
-   const g=v.government[currentTest.govIndex];
+
+ if(item.task.type==="A_RU"){
+   ok=acceptedActive(v).includes(normalize(raw));
+   ans=displayActiveAnswers(v).join(" / ");
+ }
+
+ if(item.task.type==="G"){
+   const g=v.government[item.task.govIndex];
    ok=governmentMatches(raw,g);
    ans=governmentAnswerLabel(g);
  }
- if(currentTest.type==="SENSE"){ok=normalize(raw)===normalize(v.sense_question.answer);ans=v.sense_question.answer}
- recordVocab(v,currentTest.type,ok);
- testInput.disabled=true;[...testOptions.children].forEach(x=>x.disabled=true);
- testFeedback.innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"✅ 正确":"❌ 这次不对"}<br><span class="small">可接受答案：${esc(ans)}</span></div>`;
- if(!ok&&!currentTest.retry){
-   testQueue.splice(Math.min(3,testQueue.length),0,{...currentTest,retry:true});
-   testTotalAtStart++;
+
+ if(item.task.type==="SENSE"){
+   ok=normalize(raw)===normalize(v.sense_question.answer);
+   ans=displaySenseAnswer(v);
  }
- testDoneCount++;
- nextTestBtn.classList.remove("hidden");saveProgress();renderAll();
+
+ recordVocab(v,item.task.type,ok);
+
+ item.answered=true;
+ item.raw=String(raw??"");
+ item.ok=ok;
+ item.ans=ans;
+
+ // Wrong answers return once later in the same session.
+ if(!ok&&!item.task.retry){
+   const retry={
+     task:{...item.task,retry:true},
+     answered:false,
+     raw:"",
+     ok:null,
+     ans:"",
+     options:item.options?[...item.options]:null
+   };
+   const insertAt=Math.min(testIndex+4,testItems.length);
+   testItems.splice(insertAt,0,retry);
+ }
+
+ saveProgress();
+ renderAll();
+ renderTestItem();
 }
-function recordVocab(v,type,ok){
- const p=ensureVocabProgress(v.id),d=p.dims[dimForTask(type)];
- d.recent=(d.recent||[]).slice(-9);d.recent.push(ok?1:0);
- if(ok){d.correct++;d.streak++;d.stage=Math.min(d.stage+1,REVIEW_INTERVALS.length-1);const factor=recentWeak(d)?.55:1;d.nextReview=now()+Math.max(REVIEW_INTERVALS[0],Math.round(REVIEW_INTERVALS[d.stage]*factor))}
- else{d.wrong++;d.streak=0;d.stage=Math.max(0,d.stage-2);d.nextReview=now()+REVIEW_INTERVALS[0]}
- p.needsReconfirm=false;
+
+function prevTest(){
+ if(!testItems.length)return;
+ if(testIndex>=testItems.length){
+   testIndex=testItems.length-1;
+ }else if(testIndex>0){
+   testIndex--;
+ }else{
+   return;
+ }
+ renderTestItem();
 }
-function nextTest(){nextTestBtn.classList.add("hidden");loadNextTest()}
+
+function nextTest(){
+ if(testIndex<0||testIndex>=testItems.length)return;
+ const item=testItems[testIndex];
+ if(!item.answered)return;
+
+ if(testIndex<testItems.length-1){
+   testIndex++;
+   renderTestItem();
+ }else{
+   testIndex=testItems.length;
+   renderTestItem();
+ }
+}
 
 function errorStatus(e){const p=ensureErrorProgress(e.id);if(p.status==="mastered")return"已掌握";if(p.nextReview<=now())return"待复习";return"巩固中"}
 
@@ -1282,6 +1469,7 @@ function renderAll(){
  if(document.getElementById("testPlanTotalWords")){
    if(currentTestPlan) renderTestPlan(currentTestPlan);
    else renderTestPlan();
+   if(testItems.length) testPlanTotalTasks.textContent=testItems.length;
  }
  if(!vocabLibrary.classList.contains("hidden"))renderVocabLibrary();
  if(!errorLibrary.classList.contains("hidden"))renderErrorLibrary();
