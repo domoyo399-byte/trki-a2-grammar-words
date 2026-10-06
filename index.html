@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.9.4</title>
+<title>小许 A2 学习系统 v2.9.5</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -444,7 +444,7 @@ hr{border:0;border-top:1px solid var(--line);margin:15px 0}
     <input id="fileInput" type="file" accept=".json" class="hidden">
   </div>
   <div class="footer-note">导入前会自动备份；更新词条内容不会覆盖既有学习进度。为避免长期占空间，只保留最近 5 份自动备份。</div>
-  <div class="version-note">版本 v2.9.4</div>
+  <div class="version-note">版本 v2.9.5</div>
 </div>
 </div>
 
@@ -1138,6 +1138,12 @@ function submitTypedAnswer(){
  input.blur();
  try{
    checkTest(raw);
+ }catch(err){
+   console.error(err);
+   testFeedback.innerHTML=`<div class="feedback bad">
+     <div class="result-title">⚠️ 提交发生程序错误</div>
+     <div class="small">${esc(err && err.message ? err.message : String(err))}</div>
+   </div>`;
  }finally{
    setTimeout(()=>{testSubmitLock=false},120);
  }
@@ -1203,6 +1209,31 @@ function checkTest(raw){
      result.scrollIntoView({block:"center",behavior:"smooth"});
    }
  },120);
+}
+
+
+function recordVocab(v,type,ok){
+ const p=ensureVocabProgress(v.id);
+ const d=p.dims[dimForTask(type)];
+ d.recent=(d.recent||[]).slice(-9);
+ d.recent.push(ok?1:0);
+
+ if(ok){
+   d.correct++;
+   d.streak++;
+   d.stage=Math.min(d.stage+1,REVIEW_INTERVALS.length-1);
+   const factor=recentWeak(d)?0.55:1;
+   d.nextReview=now()+Math.max(
+     REVIEW_INTERVALS[0],
+     Math.round(REVIEW_INTERVALS[d.stage]*factor)
+   );
+ }else{
+   d.wrong++;
+   d.streak=0;
+   d.stage=Math.max(0,d.stage-2);
+   d.nextReview=now()+REVIEW_INTERVALS[0];
+ }
+ p.needsReconfirm=false;
 }
 
 function prevTest(){
