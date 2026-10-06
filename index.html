@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>小许 A2 学习系统 v2.9</title>
+<title>小许 A2 学习系统 v2.9.1</title>
 <style>
 :root{
  --bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e2e7ef;
@@ -152,7 +152,11 @@ h1{margin:0;font-size:24px}.sub{font-size:13px;color:var(--muted);margin-top:4px
 .test-plan-pill b{color:var(--text);font-size:14px}
 .test-word-panel{margin-top:14px}
 .answer-input{width:100%;border:1px solid #cbd3df;border-radius:10px;padding:12px 13px}
-.feedback{padding:12px;border-radius:10px;margin-top:12px;line-height:1.6}.feedback.good{background:var(--good-bg);color:var(--good)}.feedback.bad{background:var(--bad-bg);color:var(--bad)}
+.feedback{padding:14px;border-radius:12px;margin-top:10px;line-height:1.6}.feedback.good{background:var(--good-bg);color:var(--good)}.feedback.bad{background:var(--bad-bg);color:var(--bad)}
+.result-title{font-size:22px;font-weight:760;margin-bottom:8px}
+.result-line{margin-top:5px}
+.result-label{font-weight:700}
+.result-answer{font-size:18px;font-weight:650}
 .option-list{display:grid;gap:8px}.option{border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px;text-align:left}
 .error-option-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
 .error-option{border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px;text-align:center;font-weight:650}
@@ -1015,8 +1019,9 @@ function renderTestFeedback(item){
    return;
  }
  testFeedback.innerHTML=`<div class="feedback ${item.ok?"good":"bad"}">
-   ${item.ok?"✅ 正确":"❌ 这次不对"}<br>
-   <span class="small">标准答案：${esc(item.ans)}</span>
+   <div class="result-title">${item.ok?"✅ 正确":"❌ 这次不对"}</div>
+   <div class="result-line"><span class="result-label">你的答案：</span><span class="result-answer">${esc(item.raw)}</span></div>
+   <div class="result-line"><span class="result-label">标准答案：</span><span class="result-answer">${esc(item.ans)}</span></div>
  </div>`;
 }
 
@@ -1064,6 +1069,7 @@ function renderTestItem(){
    if(item.answered){
      testInput.value=item.raw;
      testInput.disabled=true;
+     testInput.classList.add("hidden");
    }
  }
 
@@ -1074,6 +1080,7 @@ function renderTestItem(){
    if(item.answered){
      testInput.value=item.raw;
      testInput.disabled=true;
+     testInput.classList.add("hidden");
    }
  }
 
@@ -1097,7 +1104,13 @@ function renderTestItem(){
 }
 
 testInput.addEventListener("keydown",e=>{
- if(e.key==="Enter"&&!testInput.disabled)checkTest(testInput.value);
+ if(e.key==="Enter"&&!testInput.disabled){
+   e.preventDefault();
+   const raw=testInput.value.trim();
+   if(!raw)return;
+   testInput.blur();
+   checkTest(raw);
+ }
 });
 
 testInput.addEventListener("focus",()=>{
@@ -1157,9 +1170,16 @@ function checkTest(raw){
    testItems.splice(insertAt,0,retry);
  }
 
+ if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
  saveProgress();
  renderAll();
  renderTestItem();
+ setTimeout(()=>{
+   const result=document.getElementById("testFeedback");
+   if(result && result.innerHTML){
+     result.scrollIntoView({block:"center",behavior:"smooth"});
+   }
+ },120);
 }
 
 function prevTest(){
